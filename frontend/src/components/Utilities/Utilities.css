@@ -1,0 +1,19 @@
+.utilities-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.utilities-content {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.utilities-container h2 {
+  color: #333;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #20c997;
+  padding-bottom: 10px;
+}
