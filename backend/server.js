@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { testConnection } = require('./config/database');
+const { testConnection, createPartyMasterTable } = require('./config/database');
 
 // Load environment variables
 dotenv.config();
@@ -24,13 +24,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Import routes (we'll create these next)
-// const userRoutes = require('./routes/users');
-// const authRoutes = require('./routes/auth');
+// Import partyMaster routes
+const partyMasterRoutes = require('./routes/partyMasterRoutes');
 
-// Use routes
-// app.use('/api/users', userRoutes);
-// app.use('/api/auth', authRoutes);
+// Use partyMaster routes
+app.use('/api/party-master', partyMasterRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -43,12 +41,14 @@ app.use('*', (req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
+// Test DB connection and create table on startup
+(async () => {
+  await testConnection();
+  await createPartyMasterTable();
+})();
+
 // Start server
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
   console.log(`🌐 Server URL: http://localhost:${PORT}`);
-  
-  // Test database connection
-  console.log('🔌 Testing database connection...');
-  await testConnection();
 });
