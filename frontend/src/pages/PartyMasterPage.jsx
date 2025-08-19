@@ -9,6 +9,7 @@ function PartyMasterPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingRow, setEditingRow] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [query, setQuery] = useState('')
 
   async function loadParties() {
     setIsLoading(true)
@@ -36,6 +37,20 @@ function PartyMasterPage() {
     ],
     []
   )
+
+  const filteredRows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return parties
+    return parties.filter(row =>
+      String(row.party_name || '').toLowerCase().includes(q)
+      || String(row.party_type || '').toLowerCase().includes(q)
+      || String(row.vendor_code || '').toLowerCase().includes(q)
+      || String(row.email || '').toLowerCase().includes(q)
+      || String(row.gstin || '').toLowerCase().includes(q)
+      || String(row.state || '').toLowerCase().includes(q)
+      || String(row.contact_person || '').toLowerCase().includes(q)
+    )
+  }, [parties, query])
 
   async function handleDelete(id) {
     const confirmed = window.confirm('Are you sure you want to delete this party?')
@@ -82,9 +97,18 @@ function PartyMasterPage() {
     <div style={{ padding: '1rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h2 style={{ margin: 0 }}>Party Master</h2>
-        <button className="btn btn-primary" onClick={openCreate}>
-          Create Party
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            className="input"
+            placeholder="Search by name, type, vendor, email, GSTIN, state, contact"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            style={{ minWidth: 360 }}
+          />
+          <button className="btn btn-primary" onClick={openCreate}>
+            Create Party
+          </button>
+        </div>
       </div>
 
       {isFormOpen && (
@@ -118,14 +142,14 @@ function PartyMasterPage() {
               </tr>
             </thead>
             <tbody>
-              {parties.length === 0 ? (
+              {filteredRows.length === 0 ? (
                 <tr>
                   <td colSpan={columns.length + 1} style={{ padding: '12px', textAlign: 'center' }}>
                     No records found
                   </td>
                 </tr>
               ) : (
-                parties.map(row => (
+                filteredRows.map(row => (
                   <tr key={row.id}>
                     {columns.map(col => (
                       <td key={col.key} style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>
