@@ -5,7 +5,7 @@ const mysql = require('mysql2/promise');
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'Mahesh@7846',
+  password: process.env.DB_PASSWORD || 'Keshrushi@45',
   database: process.env.DB_NAME || 'jobcard_db',
   port: process.env.DB_PORT || 3306
 };
@@ -321,6 +321,102 @@ module.exports = {
       connection.release();
     } catch (error) {
       console.error('❌ Error seeding tax_master:', error.message);
+    }
+  }
+  ,
+  // Category master table and seeders
+  createCategoryMasterTable: async () => {
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS category_master (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        category_name VARCHAR(150) UNIQUE
+      );
+    `;
+    try {
+      const connection = await pool.getConnection();
+      await connection.query(createTableSQL);
+      console.log('✅ category_master table checked/created.');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error creating category_master table:', error.message);
+    }
+  },
+  seedCategoryMaster: async () => {
+    const defaults = [
+      ['Bought out material'],
+      ['Finish Good'],
+      ['Fixtures'],
+      ['JTI'],
+      ['Raw Material']
+    ];
+    try {
+      const connection = await pool.getConnection();
+      const valuesSql = defaults.map(() => '(?)').join(',');
+      const flatValues = defaults.flat();
+      await connection.query(
+        `INSERT IGNORE INTO category_master (category_name) VALUES ${valuesSql}`,
+        flatValues
+      );
+      console.log('✅ category_master seededies (if missing).');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error seeding category_master:', error.message);
+    }
+  }
+  ,
+  // Inward L/C challan table
+  createInwardLCChallanTable: async () => {
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS inward_lc_challan (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        grn_no VARCHAR(20) NOT NULL,
+        grn_date DATE NOT NULL,
+        supplier_id INT NOT NULL,
+        challan_no VARCHAR(50),
+        challan_date DATE,
+        item_id INT NOT NULL,
+        item_name VARCHAR(255),
+        process_id INT,
+        qty DECIMAL(12,3) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_grn_date (grn_date)
+      );
+    `;
+    try {
+      const connection = await pool.getConnection();
+      await connection.query(createTableSQL);
+      console.log('✅ inward_lc_challan table checked/created.');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error creating inward_lc_challan table:', error.message);
+    }
+  },
+  seedInwardLCChallan: async () => {
+    try {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query('SELECT COUNT(*) AS cnt FROM inward_lc_challan');
+      if ((rows[0]?.cnt || 0) > 0) {
+        console.log('ℹ️ inward_lc_challan already has data, skipping seed.');
+        connection.release();
+        return;
+      }
+
+      const today = new Date();
+      const defaults = [
+        ['001', today, 1, 'CH001', today, 1, 'Sample Item A', 1, 10.0],
+        ['002', today, 1, 'CH002', today, 1, 'Sample Item B', 1, 20.0],
+      ];
+
+      const valuesSql = defaults.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
+      const flat = defaults.flat();
+      await connection.query(
+        `INSERT INTO inward_lc_challan (grn_no, grn_date, supplier_id, challan_no, challan_date, item_id, item_name, process_id, qty) VALUES ${valuesSql}`,
+        flat
+      );
+      console.log('✅ inward_lc_challan seeded with sample records.');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error seeding inward_lc_challan:', error.message);
     }
   }
 };

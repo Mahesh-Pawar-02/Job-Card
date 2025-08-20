@@ -7,6 +7,8 @@ import ItemMasterPage from './pages/ItemMasterPage.jsx'
 import UnitMasterPage from './pages/UnitMasterPage.jsx'
 import StateMasterPage from './pages/StateMasterPage.jsx'
 import TaxMasterPage from './pages/TaxMasterPage.jsx'
+import CategoryMasterPage from './pages/CategoryMasterPage.jsx'
+import InwardLCChallanPage from './pages/InwardLCChallanPage.jsx'
 
 function App() {
   return (
@@ -22,9 +24,11 @@ function App() {
             <Route path="/masters/unit" element={<UnitMasterPage />} />
             <Route path="/masters/state" element={<StateMasterPage />} />
             <Route path="/masters/tax" element={<TaxMasterPage />} />
+            <Route path="/masters/category" element={<CategoryMasterPage />} />
             <Route path="/masters/items" element={<div>Items Master Page</div>} />
             <Route path="/masters/accounts" element={<div>Accounts Master Page</div>} />
             <Route path="/inward" element={<div>Inward Page</div>} />
+            <Route path="/inward/lc-challan" element={<InwardLCChallanPage />} />
             <Route path="/outward" element={<div>Outward Page</div>} />
             <Route path="/reports" element={<div>Reports Page</div>} />
             <Route path="/gst-reports" element={<div>GST Reports Page</div>} />
