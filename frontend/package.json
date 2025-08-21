@@ -10,22 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-=======
-=======
->>>>>>> 67d2da7485dfd9cb1a3c534f0bb46cd6e4fc5ca1
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^7.3.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-<<<<<<< HEAD
->>>>>>> Stashed changes
-=======
->>>>>>> 67d2da7485dfd9cb1a3c534f0bb46cd6e4fc5ca1
     "react-router-dom": "^7.8.0"
   },
   "devDependencies": {
