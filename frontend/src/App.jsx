@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <<<<<<< Updated upstream
 import { useState } from 'react'
 import Navbar from './components/Navbar'
@@ -26,6 +27,22 @@ import InwardLCChallanPage from './pages/InwardLCChallanPage.jsx'
 
 function App() {
   return (
+=======
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import Navbar from './components/Navbar.jsx'
+import HomePage from './pages/HomePage.jsx'
+import PartyMasterPage from './pages/PartyMasterPage.jsx'
+import ProcessMasterPage from './pages/ProcessMasterPage.jsx'
+import ItemMasterPage from './pages/ItemMasterPage.jsx'
+import UnitMasterPage from './pages/UnitMasterPage.jsx'
+import StateMasterPage from './pages/StateMasterPage.jsx'
+import TaxMasterPage from './pages/TaxMasterPage.jsx'
+import CategoryMasterPage from './pages/CategoryMasterPage.jsx'
+import InwardLCChallanPage from './pages/InwardLCChallanPage.jsx'
+
+function App() {
+  return (
+>>>>>>> 67d2da7485dfd9cb1a3c534f0bb46cd6e4fc5ca1
     <BrowserRouter>
       <div>
         <Navbar />
@@ -50,10 +67,13 @@ function App() {
             <Route path="/utilities" element={<div>Utilities Page</div>} />
             <Route path="/exit" element={<div>Exit Page</div>} />
           </Routes>
+<<<<<<< HEAD
 >>>>>>> Stashed changes
+=======
+>>>>>>> 67d2da7485dfd9cb1a3c534f0bb46cd6e4fc5ca1
         </div>
-      </main>
-    </div>
+      </div>
+    </BrowserRouter>
   )
 }
 

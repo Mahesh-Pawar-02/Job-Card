@@ -5,7 +5,11 @@ const mysql = require('mysql2/promise');
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
+<<<<<<< HEAD
   password: process.env.DB_PASSWORD || 'Mahesh@7846',
+=======
+  password: process.env.DB_PASSWORD || 'Keshrushi@45',
+>>>>>>> 67d2da7485dfd9cb1a3c534f0bb46cd6e4fc5ca1
   database: process.env.DB_NAME || 'jobcard_db',
   port: process.env.DB_PORT || 3307
 };
@@ -68,5 +72,355 @@ const createPartyMasterTable = async () => {
 module.exports = {
   pool,
   testConnection,
-  createPartyMasterTable
+  createPartyMasterTable,
+  // New: process master helpers
+  createProcessMasterTable: async () => {
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS process_master (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        process_code VARCHAR(20) UNIQUE,
+        process_name VARCHAR(150)
+      );
+    `;
+    try {
+      const connection = await pool.getConnection();
+      await connection.query(createTableSQL);
+      console.log('✅ process_master table checked/created.');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error creating process_master table:', error.message);
+    }
+  },
+  seedProcessMaster: async () => {
+    // Ensure default processes exist
+    const defaults = [
+      ['CHT', 'Carburizing Hardneing & Tempering'],
+      ['HT', 'Hardening and Tempering'],
+      ['OC', 'Only Carburizing'],
+      ['Shot Blasting', 'Shot Blasting'],
+      ['CHT+Shot Blasting', 'CHT + Shot Blasting']
+    ];
+    try {
+      const connection = await pool.getConnection();
+      // Use INSERT IGNORE relying on UNIQUE(process_code)
+      const valuesSql = defaults.map(() => '(?, ?)').join(',');
+      const flatValues = defaults.flat();
+      await connection.query(
+        `INSERT IGNORE INTO process_master (process_code, process_name) VALUES ${valuesSql}`,
+        flatValues
+      );
+      console.log('✅ process_master seeded with default values (if missing).');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error seeding process_master:', error.message);
+    }
+  }
+  ,
+  // Item master table
+  createItemMasterTable: async () => {
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS item_master (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        part_number VARCHAR(100) UNIQUE,
+        part_name VARCHAR(255),
+        stock_unit VARCHAR(50),
+        rate_per_kg DECIMAL(12,2),
+        weight DECIMAL(12,3),
+        surface_hardness VARCHAR(50),
+        core_hardness VARCHAR(50),
+        case_depth VARCHAR(50),
+        material VARCHAR(100),
+        batch_qty INT,
+        loading VARCHAR(100),
+        broach_spline VARCHAR(100),
+        anti_carb_paste VARCHAR(100),
+        pattern_no VARCHAR(100),
+        rpm INT,
+        shot_blasting VARCHAR(20),
+        punching VARCHAR(20)
+      );
+    `;
+    try {
+      const connection = await pool.getConnection();
+      await connection.query(createTableSQL);
+      console.log('✅ item_master table checked/created.');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error creating item_master table:', error.message);
+    }
+  }
+  ,
+  // Unit master table and seeders
+  createUnitMasterTable: async () => {
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS unit_master (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        unit_code VARCHAR(20) UNIQUE,
+        unit_name VARCHAR(100)
+      );
+    `;
+    try {
+      const connection = await pool.getConnection();
+      await connection.query(createTableSQL);
+      console.log('✅ unit_master table checked/created.');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error creating unit_master table:', error.message);
+    }
+  },
+  seedUnitMaster: async () => {
+    const defaults = [
+      ['KG', 'Kilograms'],
+      ['NOS', 'Numbers']
+    ];
+    try {
+      const connection = await pool.getConnection();
+      const valuesSql = defaults.map(() => '(?, ?)').join(',');
+      const flatValues = defaults.flat();
+      await connection.query(
+        `INSERT IGNORE INTO unit_master (unit_code, unit_name) VALUES ${valuesSql}`,
+        flatValues
+      );
+      console.log('✅ unit_master seeded with default values (if missing).');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error seeding unit_master:', error.message);
+    }
+  }
+  ,
+  // State master table and seeders
+  createStateMasterTable: async () => {
+    // Ensure table exists
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS state_master (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        state_code VARCHAR(10) UNIQUE,
+        state_name VARCHAR(100)
+      );
+    `;
+    try {
+      const connection = await pool.getConnection();
+      await connection.query(createTableSQL);
+
+      // Ensure gst_state_code column exists (compatible with MySQL versions without IF NOT EXISTS)
+      const [cols] = await connection.query("SHOW COLUMNS FROM state_master LIKE 'gst_state_code'");
+      if (cols.length === 0) {
+        await connection.query('ALTER TABLE state_master ADD COLUMN gst_state_code INT');
+      }
+
+      // Ensure unique index on gst_state_code exists
+      const [indexes] = await connection.query(
+        "SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'state_master' AND INDEX_NAME = 'ux_state_master_gst_code'"
+      );
+      if (indexes.length === 0) {
+        try {
+          await connection.query('CREATE UNIQUE INDEX ux_state_master_gst_code ON state_master (gst_state_code)');
+        } catch (_) {
+          // Ignore if concurrent creation or version-specific differences
+        }
+      }
+
+      console.log('✅ state_master table checked/created (gst_state_code ensured).');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error creating/updating state_master table:', error.message);
+    }
+  },
+  seedStateMaster: async () => {
+    // GST state codes (e.g., Maharashtra = 27)
+    const defaults = [
+      // States
+      ['AP', 'Andhra Pradesh', 37],
+      ['AR', 'Arunachal Pradesh', 12],
+      ['AS', 'Assam', 18],
+      ['BR', 'Bihar', 10],
+      ['CT', 'Chhattisgarh', 22],
+      ['GA', 'Goa', 30],
+      ['GJ', 'Gujarat', 24],
+      ['HR', 'Haryana', 6],
+      ['HP', 'Himachal Pradesh', 2],
+      ['JH', 'Jharkhand', 20],
+      ['KA', 'Karnataka', 29],
+      ['KL', 'Kerala', 32],
+      ['MP', 'Madhya Pradesh', 23],
+      ['MH', 'Maharashtra', 27],
+      ['MN', 'Manipur', 14],
+      ['ML', 'Meghalaya', 17],
+      ['MZ', 'Mizoram', 15],
+      ['NL', 'Nagaland', 13],
+      ['OD', 'Odisha', 21],
+      ['PB', 'Punjab', 3],
+      ['RJ', 'Rajasthan', 8],
+      ['SK', 'Sikkim', 11],
+      ['TN', 'Tamil Nadu', 33],
+      ['TS', 'Telangana', 36],
+      ['TR', 'Tripura', 16],
+      ['UP', 'Uttar Pradesh', 9],
+      ['UK', 'Uttarakhand', 5],
+      ['WB', 'West Bengal', 19],
+      // Union Territories
+      ['AN', 'Andaman and Nicobar Islands', 35],
+      ['CH', 'Chandigarh', 4],
+      ['DN', 'Dadra and Nagar Haveli and Daman and Diu', 26],
+      ['DL', 'Delhi', 7],
+      ['JK', 'Jammu and Kashmir', 1],
+      ['LA', 'Ladakh', 38],
+      ['LD', 'Lakshadweep', 31],
+      ['PY', 'Puducherry', 34],
+    ];
+    try {
+      const connection = await pool.getConnection();
+      const valuesSql = defaults.map(() => '(?, ?, ?)').join(',');
+      const flatValues = defaults.flat();
+      // Upsert by state_code to ensure gst_state_code is updated if previously inserted
+      await connection.query(
+        `INSERT INTO state_master (state_code, state_name, gst_state_code) VALUES ${valuesSql}
+         ON DUPLICATE KEY UPDATE state_name = VALUES(state_name), gst_state_code = VALUES(gst_state_code)`,
+        flatValues
+      );
+      console.log('✅ state_master seeded/updated with GST codes.');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error seeding state_master:', error.message);
+    }
+  }
+  ,
+  // Tax master table and seeders
+  createTaxMasterTable: async () => {
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS tax_master (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tax_name VARCHAR(100) UNIQUE,
+        cgst_per DECIMAL(5,2) DEFAULT 0,
+        sgst_per DECIMAL(5,2) DEFAULT 0,
+        igst_per DECIMAL(5,2) DEFAULT 0,
+        cess_per DECIMAL(5,2) DEFAULT 0
+      );
+    `;
+    try {
+      const connection = await pool.getConnection();
+      await connection.query(createTableSQL);
+      console.log('✅ tax_master table checked/created.');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error creating tax_master table:', error.message);
+    }
+  },
+  seedTaxMaster: async () => {
+    const defaults = [
+      ['GST 18%', 9.00, 9.00, 18.00, 0.00],
+      ['GST 12%', 6.00, 6.00, 12.00, 0.00],
+      ['+GST 18%', 0.00, 0.00, 18.00, 0.00]
+    ];
+    try {
+      const connection = await pool.getConnection();
+      const valuesSql = defaults.map(() => '(?, ?, ?, ?, ?)').join(',');
+      const flatValues = defaults.flat();
+      await connection.query(
+        `INSERT INTO tax_master (tax_name, cgst_per, sgst_per, igst_per, cess_per) VALUES ${valuesSql}
+         ON DUPLICATE KEY UPDATE cgst_per = VALUES(cgst_per), sgst_per = VALUES(sgst_per), igst_per = VALUES(igst_per), cess_per = VALUES(cess_per)`,
+        flatValues
+      );
+      console.log('✅ tax_master seeded with default taxes.');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error seeding tax_master:', error.message);
+    }
+  }
+  ,
+  // Category master table and seeders
+  createCategoryMasterTable: async () => {
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS category_master (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        category_name VARCHAR(150) UNIQUE
+      );
+    `;
+    try {
+      const connection = await pool.getConnection();
+      await connection.query(createTableSQL);
+      console.log('✅ category_master table checked/created.');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error creating category_master table:', error.message);
+    }
+  },
+  seedCategoryMaster: async () => {
+    const defaults = [
+      ['Bought out material'],
+      ['Finish Good'],
+      ['Fixtures'],
+      ['JTI'],
+      ['Raw Material']
+    ];
+    try {
+      const connection = await pool.getConnection();
+      const valuesSql = defaults.map(() => '(?)').join(',');
+      const flatValues = defaults.flat();
+      await connection.query(
+        `INSERT IGNORE INTO category_master (category_name) VALUES ${valuesSql}`,
+        flatValues
+      );
+      console.log('✅ category_master seededies (if missing).');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error seeding category_master:', error.message);
+    }
+  }
+  ,
+  // Inward L/C challan table
+  createInwardLCChallanTable: async () => {
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS inward_lc_challan (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        grn_no VARCHAR(20) NOT NULL,
+        grn_date DATE NOT NULL,
+        supplier_id INT NOT NULL,
+        challan_no VARCHAR(50),
+        challan_date DATE,
+        item_id INT NOT NULL,
+        item_name VARCHAR(255),
+        process_id INT,
+        qty DECIMAL(12,3) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_grn_date (grn_date)
+      );
+    `;
+    try {
+      const connection = await pool.getConnection();
+      await connection.query(createTableSQL);
+      console.log('✅ inward_lc_challan table checked/created.');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error creating inward_lc_challan table:', error.message);
+    }
+  },
+  seedInwardLCChallan: async () => {
+    try {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query('SELECT COUNT(*) AS cnt FROM inward_lc_challan');
+      if ((rows[0]?.cnt || 0) > 0) {
+        console.log('ℹ️ inward_lc_challan already has data, skipping seed.');
+        connection.release();
+        return;
+      }
+
+      const today = new Date();
+      const defaults = [
+        ['001', today, 1, 'CH001', today, 1, 'Sample Item A', 1, 10.0],
+        ['002', today, 1, 'CH002', today, 1, 'Sample Item B', 1, 20.0],
+      ];
+
+      const valuesSql = defaults.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
+      const flat = defaults.flat();
+      await connection.query(
+        `INSERT INTO inward_lc_challan (grn_no, grn_date, supplier_id, challan_no, challan_date, item_id, item_name, process_id, qty) VALUES ${valuesSql}`,
+        flat
+      );
+      console.log('✅ inward_lc_challan seeded with sample records.');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error seeding inward_lc_challan:', error.message);
+    }
+  }
 };

@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { testConnection, createPartyMasterTable } = require('./config/database');
+const { testConnection, createPartyMasterTable, createProcessMasterTable, seedProcessMaster, createItemMasterTable, createUnitMasterTable, seedUnitMaster, createStateMasterTable, seedStateMaster, createTaxMasterTable, seedTaxMaster, createCategoryMasterTable, seedCategoryMaster, createInwardLCChallanTable, seedInwardLCChallan } = require('./config/database');
 
 // Load environment variables
 dotenv.config();
@@ -26,9 +26,23 @@ app.get('/health', (req, res) => {
 
 // Import partyMaster routes
 const partyMasterRoutes = require('./routes/partyMasterRoutes');
+const processMasterRoutes = require('./routes/processMasterRoutes');
+const itemMasterRoutes = require('./routes/itemMasterRoutes');
+const unitMasterRoutes = require('./routes/unitMasterRoutes');
+const stateMasterRoutes = require('./routes/stateMasterRoutes');
+const taxMasterRoutes = require('./routes/taxMasterRoutes');
+const categoryMasterRoutes = require('./routes/categoryMasterRoutes');
+const inwardLCChallanRoutes = require('./routes/inwardLCChallanRoutes');
 
 // Use partyMaster routes
 app.use('/api/party-master', partyMasterRoutes);
+app.use('/api/process-master', processMasterRoutes);
+app.use('/api/item-master', itemMasterRoutes);
+app.use('/api/unit-master', unitMasterRoutes);
+app.use('/api/state-master', stateMasterRoutes);
+app.use('/api/tax-master', taxMasterRoutes);
+app.use('/api/category-master', categoryMasterRoutes);
+app.use('/api/inward-lc-challan', inwardLCChallanRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -45,6 +59,19 @@ app.use('*', (req, res) => {
 (async () => {
   await testConnection();
   await createPartyMasterTable();
+  await createProcessMasterTable();
+  await seedProcessMaster();
+  await createItemMasterTable();
+  await createUnitMasterTable();
+  await seedUnitMaster();
+  await createStateMasterTable();
+  await seedStateMaster();
+  await createTaxMasterTable();
+  await seedTaxMaster();
+  await createCategoryMasterTable();
+  await seedCategoryMaster();
+  await createInwardLCChallanTable();
+  await seedInwardLCChallan();
 })();
 
 // Start server
