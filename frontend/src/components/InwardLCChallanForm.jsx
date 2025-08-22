@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchNextGrnNo } from '../services/inwardLCChallanApi.js'
 
-function InwardLCChallanForm({ parties = [], items = [], processes = [], onSubmit, onCancel, submitLabel = 'Save', isSubmitting = false, initialValues = {}, externalSubmitSignal, editingId }) {
+function InwardLCChallanForm({ parties = [], items = [], processes = [], onSubmit, onInsert, onCancel, submitLabel = 'Save', isSubmitting = false, initialValues = {}, externalSubmitSignal, editingId }) {
   // Fetch next GRN number from backend
   const [autoGrn, setAutoGrn] = useState('')
   useEffect(() => {
@@ -22,6 +22,18 @@ function InwardLCChallanForm({ parties = [], items = [], processes = [], onSubmi
   function getCurrentDate() {
     const today = new Date()
     return today.toISOString().split('T')[0]
+  }
+
+  // Function to format date for backend (ensure YYYY-MM-DD format)
+  function formatDateForBackend(dateValue) {
+    if (!dateValue) return null
+    // If it's already in YYYY-MM-DD format, return as is
+    if (typeof dateValue === 'string' && dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return dateValue
+    }
+    // If it's a Date object or ISO string, convert to YYYY-MM-DD
+    const date = new Date(dateValue)
+    return date.toISOString().split('T')[0]
   }
 
   const defaultValues = useMemo(
@@ -136,7 +148,34 @@ function InwardLCChallanForm({ parties = [], items = [], processes = [], onSubmi
   async function handleSubmit(e) {
     e?.preventDefault?.()
     if (!validate()) return
-    await onSubmit?.(form)
+    // Format dates before sending to backend
+    const formattedForm = {
+      ...form,
+      grn_date: formatDateForBackend(form.grn_date),
+      challan_date: formatDateForBackend(form.challan_date)
+    }
+    await onSubmit?.(formattedForm)
+  }
+
+  async function handleInsert(e) {
+    e?.preventDefault?.()
+    if (!validate()) return
+    // Format dates before sending to backend
+    const formattedForm = {
+      ...form,
+      grn_date: formatDateForBackend(form.grn_date),
+      challan_date: formatDateForBackend(form.challan_date)
+    }
+    await onInsert?.(formattedForm)
+    // Reset only line-level fields to allow inserting next part under same challan/GRN
+    setForm(prev => ({
+      ...prev,
+      item_id: '',
+      item_name: '',
+      process_id: '',
+      qty: ''
+    }))
+    setErrors({})
   }
 
   // Allow parent to trigger submit (for Update action in table)
@@ -268,6 +307,9 @@ function InwardLCChallanForm({ parties = [], items = [], processes = [], onSubmi
 
       <div className="form-actions">
         <button className="btn btn-success" type="submit" disabled={isSubmitting}>{submitLabel}</button>
+        {!editingId && (
+          <button className="btn btn-primary" type="button" onClick={handleInsert} disabled={isSubmitting}>Insert</button>
+        )}
         <button className="btn btn-secondary" type="button" onClick={onCancel} disabled={isSubmitting}>Cancel</button>
       </div>
     </form>

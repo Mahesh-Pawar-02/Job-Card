@@ -5,9 +5,9 @@ const mysql = require('mysql2/promise');
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'Keshrushi@45',
+  password: process.env.DB_PASSWORD || 'Mahesh@7846',
   database: process.env.DB_NAME || 'jobcard_db',
-  port: process.env.DB_PORT || 3306
+  port: process.env.DB_PORT || 3307
 };
 
 // Create connection pool
@@ -417,6 +417,29 @@ module.exports = {
       connection.release();
     } catch (error) {
       console.error('❌ Error seeding inward_lc_challan:', error.message);
+    }
+  }
+  ,
+  // Sequence table for GRN numbers to prevent reuse after deletions
+  createInwardLCGrnSeqTable: async () => {
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS inward_lc_grn_seq (
+        id INT AUTO_INCREMENT PRIMARY KEY
+      );
+    `;
+    try {
+      const connection = await pool.getConnection();
+      await connection.query(createTableSQL);
+      // Sync AUTO_INCREMENT to be greater than existing max grn_no
+      const [rows] = await connection.query('SELECT MAX(CAST(grn_no AS UNSIGNED)) AS max_grn FROM inward_lc_challan');
+      const maxGrn = Number(rows[0]?.max_grn || 0);
+      if (maxGrn > 0) {
+        await connection.query(`ALTER TABLE inward_lc_grn_seq AUTO_INCREMENT = ${maxGrn + 1}`);
+      }
+      console.log('✅ inward_lc_grn_seq table checked/created and synced.');
+      connection.release();
+    } catch (error) {
+      console.error('❌ Error creating/syncing inward_lc_grn_seq:', error.message);
     }
   }
 };

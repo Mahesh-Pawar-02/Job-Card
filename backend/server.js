@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { testConnection, createPartyMasterTable, createProcessMasterTable, seedProcessMaster, createItemMasterTable, createUnitMasterTable, seedUnitMaster, createStateMasterTable, seedStateMaster, createTaxMasterTable, seedTaxMaster, createCategoryMasterTable, seedCategoryMaster, createInwardLCChallanTable, seedInwardLCChallan } = require('./config/database');
+const { testConnection, createPartyMasterTable, createProcessMasterTable, seedProcessMaster, createItemMasterTable, createUnitMasterTable, seedUnitMaster, createStateMasterTable, seedStateMaster, createTaxMasterTable, seedTaxMaster, createCategoryMasterTable, seedCategoryMaster, createInwardLCChallanTable, seedInwardLCChallan, createInwardLCGrnSeqTable } = require('./config/database');
 
 // Load environment variables
 dotenv.config();
@@ -71,6 +71,7 @@ app.use('*', (req, res) => {
   await createCategoryMasterTable();
   await seedCategoryMaster();
   await createInwardLCChallanTable();
+  await createInwardLCGrnSeqTable();
   await seedInwardLCChallan();
 })();
 
