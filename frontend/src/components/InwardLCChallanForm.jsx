@@ -1,23 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { fetchNextGrnNo } from '../services/inwardLCChallanApi.js'
 
 function InwardLCChallanForm({ parties = [], items = [], processes = [], onSubmit, onInsert, onCancel, submitLabel = 'Save', isSubmitting = false, initialValues = {}, externalSubmitSignal, editingId }) {
-  // Fetch next GRN number from backend
-  const [autoGrn, setAutoGrn] = useState('')
-  useEffect(() => {
-    let ignore = false
-    async function load() {
-      try {
-        const data = await fetchNextGrnNo()
-        if (!ignore) setAutoGrn(data?.next_grn_no || '001')
-      } catch {
-        if (!ignore) setAutoGrn('001')
-      }
-    }
-    load()
-    return () => { ignore = true }
-  }, [])
-
   // Function to get current date in YYYY-MM-DD format
   function getCurrentDate() {
     const today = new Date()
@@ -38,7 +21,7 @@ function InwardLCChallanForm({ parties = [], items = [], processes = [], onSubmi
 
   const defaultValues = useMemo(
     () => ({
-      grn_no: autoGrn || '001',
+      grn_no: initialValues.grn_no || '', // Editable by user
       grn_date: getCurrentDate(),
       supplier_id: '',
       challan_no: '',
@@ -48,19 +31,11 @@ function InwardLCChallanForm({ parties = [], items = [], processes = [], onSubmi
       process_id: '',
       qty: '',
     }),
-    []
+    [initialValues]
   )
 
   const [form, setForm] = useState({ ...defaultValues, ...initialValues })
 
-  // When autoGrn updates (initial mount), set grn_no if not editing
-  useEffect(() => {
-    const isEditing = Boolean(initialValues && (initialValues.id || initialValues._id)) || Boolean(editingId)
-    if (!isEditing && autoGrn) {
-      setForm(prev => ({ ...prev, grn_no: autoGrn }))
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoGrn])
   const [errors, setErrors] = useState({})
   const [supplierQuery, setSupplierQuery] = useState('')
   const [supplierOpen, setSupplierOpen] = useState(false)
@@ -188,15 +163,16 @@ function InwardLCChallanForm({ parties = [], items = [], processes = [], onSubmi
 
   return (
     <form onSubmit={handleSubmit} className="card">
-      <div className="card-header">
-        <h3 className="card-title" style={{ margin: 0 }}>{submitLabel} Inward Challan for L/C</h3>
-        <p className="card-subtitle">GRN number Dates set to current. Enter supplier, challan details, item and quantity.</p>
-      </div>
-
       <div className="form-grid">
         <div className="field">
           <label>G.R.N. No</label>
-          <input className="input" value={form.grn_no} onChange={e => updateField('grn_no', e.target.value)} placeholder="G.R.N. No" />
+          <input
+            className="input"
+            value={form.grn_no}
+            onChange={e => setForm(f => ({ ...f, grn_no: e.target.value }))}
+            placeholder="Enter GRN No"
+            required
+          />
           {errors.grn_no && <div className="error">{errors.grn_no}</div>}
         </div>
         <div className="field">

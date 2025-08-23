@@ -77,15 +77,15 @@ function InwardLCChallanPage() {
     try {
       setSubmitting(true)
       if (editingRow?.id) {
+        // Update existing inward
         const updated = await updateInwardLC(editingRow.id, payload)
-        // Refresh the entire list since we're now grouping by GRN
         const refreshedList = await fetchInwardLCList()
         setRows(refreshedList)
         setEditingRow(null)
         setIsFormOpen(false)
       } else {
+        // Create new inward, user provides GRN No
         const created = await createInwardLC(payload)
-        // Refresh the entire list since we're now grouping by GRN
         const refreshedList = await fetchInwardLCList()
         setRows(refreshedList)
         setIsFormOpen(false)
@@ -97,20 +97,9 @@ function InwardLCChallanPage() {
     }
   }
 
-  async function handleInsert(payload) {
-    try {
-      setSubmitting(true)
-      // Ensure GRN number persists across inserts
-      const created = await createInwardLC(payload)
-      // Refresh the entire list since we're now grouping by GRN
-      const refreshedList = await fetchInwardLCList()
-      setRows(refreshedList)
-      // Keep form open for next part; do not close or change editing state
-    } catch (e) {
-      setError(e?.message || 'Failed to insert')
-    } finally {
-      setSubmitting(false)
-    }
+  function handleInsert() {
+    // If you use this for adding parts, make sure it does NOT call createInwardLC for new GRN
+    // Or remove this function if not needed
   }
 
   function handleCancel() {
@@ -143,13 +132,72 @@ function InwardLCChallanPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h2 style={{ margin: 0 }}>Inward Challan for L/C</h2>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input className="input" placeholder="Search GRN No" value={grnSearch} onChange={e => setGrnSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleSearchGrn() }} style={{ width: 160 }} />
-          <button className="btn btn-outline-secondary" type="button" onClick={handleSearchGrn}>Search</button>
-        </div>
-      </div>
+      <div style={{
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-end',
+  marginBottom: '1.5rem',
+  flexWrap: 'wrap'
+}}>
+  <h2 style={{ margin: 0, fontWeight: 700, color: '#2c3e50', letterSpacing: 1 }}>Inward Challan for L/C</h2>
+  <div style={{
+    display: 'flex',
+    gap: 12,
+    alignItems: 'center',
+    background: '#f8f9fa',
+    padding: '12px 18px',
+    borderRadius: 8,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
+  }}>
+    <input
+      className="input"
+      placeholder="Search GRN No"
+      value={grnSearch}
+      onChange={e => setGrnSearch(e.target.value)}
+      onKeyDown={e => { if (e.key === 'Enter') handleSearchGrn() }}
+      style={{
+        width: 180,
+        padding: '8px 12px',
+        border: '1px solid #d1d5db',
+        borderRadius: 6,
+        fontSize: 15
+      }}
+    />
+    <button
+      className="btn btn-outline-secondary btn-sm"
+      type="button"
+      onClick={handleSearchGrn}
+      style={{
+        padding: '6px 18px',
+        fontSize: 15,
+        borderRadius: 6,
+        border: '1px solid #6c757d',
+        background: '#fff',
+        color: '#2c3e50',
+        fontWeight: 500
+      }}
+    >
+      Search
+    </button>
+    <button
+      className="btn btn-primary"
+      title="New"
+      onClick={() => { setEditingRow(null); setIsFormOpen(true) }}
+      style={{
+        padding: '8px 22px',
+        fontSize: 16,
+        borderRadius: 6,
+        background: 'linear-gradient(90deg,#007bff 60%,#0056b3 100%)',
+        color: '#fff',
+        fontWeight: 600,
+        boxShadow: '0 2px 8px rgba(0,123,255,0.08)',
+        border: 'none'
+      }}
+    >
+      + New
+    </button>
+  </div>
+</div>
 
       {isFormOpen && (
         <InwardLCChallanForm
@@ -168,55 +216,44 @@ function InwardLCChallanPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {['#','GRN No','GRN Date','Supplier','Challan No','Challan Date','Parts Details','Total Parts','Total Qty'].map(h => (
-                <th key={h} style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '8px' }}>{h}</th>
-              ))}
+              <th style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '8px' }}>GRN No</th>
+              <th style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '8px' }}>Date</th>
+              <th style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '8px' }}>Supplier Name</th>
+              <th style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '8px' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-                         {rows.length === 0 ? (
-               <tr><td colSpan={9} style={{ padding: '12px', textAlign: 'center' }}>No records</td></tr>
-             ) : (
-               rows.map((r, idx) => (
-                 <tr key={r.grn_no} onClick={() => setSelectedIndex(idx)} style={{ cursor: 'pointer', background: selectedIndex === idx ? '#f8f9fa' : 'transparent' }}>
-                   <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px', width: 60 }}>{idx + 1}</td>
-                   <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>{r.grn_no}</td>
-                   <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>{r.grn_date?.slice?.(0,10)}</td>
-                   <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>{(parties.find(p => (p.id||p._id) == r.supplier_id)?.party_name) || r.supplier_id}</td>
-                   <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>{r.challan_no}</td>
-                   <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>{r.challan_date?.slice?.(0,10)}</td>
-                   <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px', maxWidth: '300px', wordWrap: 'break-word' }}>{r.parts_details || 'No parts'}</td>
-                   <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>{r.total_parts}</td>
-                   <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>{r.total_qty}</td>
-                 </tr>
-               ))
-             )}
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={4} style={{ padding: '12px', textAlign: 'center' }}>No records</td>
+              </tr>
+            ) : (
+              rows.map((r, idx) => (
+                <tr key={r.grn_no} style={{ cursor: 'pointer', background: selectedIndex === idx ? '#f8f9fa' : 'transparent' }}>
+                  <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>{r.grn_no}</td>
+                  <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>{r.grn_date?.slice?.(0,10)}</td>
+                  <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>
+                    {(parties.find(p => (p.id||p._id) == r.supplier_id)?.party_name) || r.supplier_id}
+                  </td>
+                  <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px', minWidth: 180 }}>
+                    <button className="btn btn-outline-warning btn-sm" title="Edit" onClick={() => { setSelectedIndex(idx); setEditingRow(r); setIsFormOpen(true); }}>Edit</button>{' '}
+                    <button className="btn btn-outline-danger btn-sm" title="Delete" onClick={async () => { 
+                      if (window.confirm('Delete this GRN and all its parts?')) { 
+                        const response = await fetch(`/api/inward-lc-challan/grn/${r.grn_no}`, { method: 'DELETE' });
+                        if (response.ok) {
+                          setRows(prev => prev.filter(x => x.grn_no !== r.grn_no));
+                          setSelectedIndex(-1);
+                        }
+                      }
+                    }}>Delete</button>{' '}
+                    <button className="btn btn-outline-secondary btn-sm" title="View" onClick={() => { setSelectedIndex(idx); setViewRow(r); }}>View</button>{' '}
+                    <button className="btn btn-outline-primary btn-sm" title="Print" onClick={() => { setSelectedIndex(idx); handlePrint(r); }}>Print</button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
-        <div style={{ padding: '8px', borderTop: '1px solid #eee', display: 'flex', gap: 8 }}>
-          <button className="btn btn-outline-secondary" title="New" onClick={() => { setEditingRow(null); setIsFormOpen(true) }}>
-            New
-          </button>
-          <button className="btn btn-outline-warning" title="Edit" onClick={() => { if (selectedRow) { setEditingRow(selectedRow); setIsFormOpen(true) } }} disabled={!selectedRow}>
-            Edit
-          </button>
-          <button className="btn btn-outline-danger" title="Delete" onClick={async () => { if (selectedRow && window.confirm('Delete this GRN and all its parts?')) { 
-            // Delete all parts for this GRN
-            const response = await fetch(`/api/inward-lc-challan/grn/${selectedRow.grn_no}`, { method: 'DELETE' });
-            if (response.ok) {
-              setRows(prev => prev.filter(x => x.grn_no !== selectedRow.grn_no));
-              setSelectedIndex(prev => { const len = rows.length - 1; if (len <= 0) return -1; return Math.max(0, Math.min(prev, len - 1)) });
-            }
-          } }} disabled={!selectedRow}>
-            Delete
-          </button>
-          <button className="btn btn-outline-secondary" title="View" onClick={() => selectedRow && setViewRow(selectedRow)} disabled={!selectedRow}>
-            View
-          </button>
-          <button className="btn btn-outline-primary" title="Print" onClick={() => selectedRow && handlePrint(selectedRow)} disabled={!selectedRow}>
-            Print
-          </button>
-        </div>
       </div>
 
       {viewRow && (
