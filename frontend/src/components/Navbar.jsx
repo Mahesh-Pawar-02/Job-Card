@@ -316,7 +316,6 @@ function Navbar() {
           borderBottom: '1px solid #e1e5e9',
           boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)',
           padding: '0 2rem',
-          marginBottom: '1rem',
           position: 'relative'
         }}
         role="navigation"

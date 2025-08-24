@@ -1,3 +1,5 @@
+
+
 /* Card container */
 .card {
   background-color: #ffffff;
@@ -151,8 +153,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding: 12px 16px;
+  margin-bottom: 6px;
+  padding: 5px 16px;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
@@ -197,8 +199,8 @@
   display: flex;
   gap: 12px;
   align-items: center;
-  margin-bottom: 16px;
-  padding: 12px 16px;
+  margin-bottom: 6px;
+  padding: 5px 16px;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
