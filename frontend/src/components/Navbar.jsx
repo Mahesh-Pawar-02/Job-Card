@@ -10,13 +10,13 @@ function Navbar() {
   const navRef = useRef(null)
 
   const navItems = [
-    { path: 'masters-dropdown', label: 'Masters', hasDropdown: true },
-    { path: 'inward-dropdown', label: 'Inward', hasDropdown: true },
-    { path: 'outward-dropdown', label: 'Outward', hasDropdown: true },
-    { path: 'reports-dropdown', label: 'Reports', hasDropdown: true },
-    { path: 'gst-reports-dropdown', label: 'GST Reports', hasDropdown: true },
-    { path: 'outstanding-dropdown', label: 'Outstanding', hasDropdown: true },
-    { path: 'utilities-dropdown', label: 'Utilities', hasDropdown: true },
+    { path: 'masters-dropdown', label: 'Masters', hasDropdown: true, number: '1' },
+    { path: 'inward-dropdown', label: 'Inward', hasDropdown: true, number: '2' },
+    { path: 'outward-dropdown', label: 'Outward', hasDropdown: true, number: '3' },
+    { path: 'reports-dropdown', label: 'Reports', hasDropdown: true, number: '4' },
+    { path: 'gst-reports-dropdown', label: 'GST Reports', hasDropdown: true, number: '5' },
+    { path: 'outstanding-dropdown', label: 'Outstanding', hasDropdown: true, number: '6' },
+    { path: 'utilities-dropdown', label: 'Utilities', hasDropdown: true, number: '7' },
   ]
 
   const mastersDropdownItems = [
@@ -100,8 +100,100 @@ function Navbar() {
     { path: '/utilities/update-hsn-sac', label: 'Update HSN/SAC', number: 'J' },
   ]
 
-  // Keyboard navigation handlers
-  const handleKeyDown = useCallback((e) => {
+  // Global keyboard navigation handler
+  const handleGlobalKeyDown = useCallback((e) => {
+    // Don't interfere with input fields, textareas, or when typing
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true') {
+      return
+    }
+
+    // Don't interfere with common keyboard shortcuts
+    if (e.ctrlKey || e.altKey || e.metaKey) {
+      return
+    }
+
+    const currentDropdownItems = openDropdown === 'Masters' ? mastersDropdownItems : 
+                               openDropdown === 'Inward' ? inwardDropdownItems :
+                               openDropdown === 'Outward' ? outwardDropdownItems :
+                               openDropdown === 'Reports' ? reportsDropdownItems :
+                               openDropdown === 'GST Reports' ? gstReportsDropdownItems :
+                               openDropdown === 'Outstanding' ? outstandingDropdownItems :
+                               openDropdown === 'Utilities' ? utilitiesDropdownItems : []
+
+    switch (e.key) {
+      // Main menu shortcuts (1-7) - works globally
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+        e.preventDefault()
+        const menuIndex = parseInt(e.key) - 1
+        if (menuIndex < navItems.length && navItems[menuIndex].hasDropdown) {
+          const targetMenu = navItems[menuIndex]
+          setOpenDropdown(targetMenu.label)
+          setFocusedIndex(menuIndex)
+          setDropdownFocusedIndex(0)
+          // Scroll to navbar to make dropdown visible
+          navRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+        break
+      
+      // Dropdown item shortcuts (A-Z) - works globally when dropdown is open
+      case 'A':
+      case 'B':
+      case 'C':
+      case 'D':
+      case 'E':
+      case 'F':
+      case 'G':
+      case 'H':
+      case 'I':
+      case 'J':
+      case 'K':
+      case 'L':
+      case 'M':
+      case 'N':
+      case 'O':
+      case 'P':
+      case 'Q':
+      case 'R':
+      case 'S':
+      case 'T':
+      case 'U':
+      case 'V':
+      case 'W':
+      case 'X':
+      case 'Y':
+      case 'Z':
+        if (openDropdown) {
+          e.preventDefault()
+          const pressedKey = e.key
+          const selectedItem = currentDropdownItems.find(item => item.number === pressedKey)
+          if (selectedItem) {
+            window.location.href = selectedItem.path
+            setOpenDropdown(null)
+            setDropdownFocusedIndex(-1)
+          }
+        }
+        break
+      
+      // Close dropdown with Escape
+      case 'Escape':
+        if (openDropdown) {
+          e.preventDefault()
+          setOpenDropdown(null)
+          setDropdownFocusedIndex(-1)
+          setFocusedIndex(-1)
+        }
+        break
+    }
+  }, [openDropdown, navItems.length])
+
+  // Local navbar keyboard navigation (for arrow keys and focus management)
+  const handleNavbarKeyDown = useCallback((e) => {
     const currentDropdownItems = openDropdown === 'Masters' ? mastersDropdownItems : 
                                openDropdown === 'Inward' ? inwardDropdownItems :
                                openDropdown === 'Outward' ? outwardDropdownItems :
@@ -175,73 +267,29 @@ function Navbar() {
           setDropdownFocusedIndex(-1)
         }
         break
-      case 'Escape':
-        setOpenDropdown(null)
-        setDropdownFocusedIndex(-1)
-        setFocusedIndex(-1)
-        break
       case 'Tab':
         setFocusedIndex(-1)
         setDropdownFocusedIndex(-1)
         break
-      case '0':
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case '6':
-      case '7':
-      case '8':
-      case '9':
-      case 'A':
-      case 'B':
-      case 'C':
-      case 'D':
-      case 'E':
-      case 'F':
-      case 'G':
-      case 'H':
-      case 'I':
-      case 'J':
-      case 'K':
-      case 'L':
-      case 'M':
-      case 'N':
-      case 'O':
-      case 'P':
-      case 'Q':
-      case 'R':
-      case 'S':
-      case 'T':
-      case 'U':
-      case 'V':
-      case 'W':
-      case 'X':
-      case 'Y':
-      case 'Z':
-        if (openDropdown) {
-          e.preventDefault()
-          const pressedKey = e.key
-          const selectedItem = currentDropdownItems.find(item => item.number === pressedKey)
-          if (selectedItem) {
-            window.location.href = selectedItem.path
-            setOpenDropdown(null)
-            setDropdownFocusedIndex(-1)
-          }
-        }
-        break
     }
   }, [focusedIndex, openDropdown, dropdownFocusedIndex, navItems.length])
 
-  // Focus management
+  // Global keyboard event listener
+  useEffect(() => {
+    document.addEventListener('keydown', handleGlobalKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleGlobalKeyDown)
+    }
+  }, [handleGlobalKeyDown])
+
+  // Local navbar keyboard event listener
   useEffect(() => {
     const navElement = navRef.current
     if (navElement) {
-      navElement.addEventListener('keydown', handleKeyDown)
-      return () => navElement.removeEventListener('keydown', handleKeyDown)
+      navElement.addEventListener('keydown', handleNavbarKeyDown)
+      return () => navElement.removeEventListener('keydown', handleNavbarKeyDown)
     }
-  }, [handleKeyDown])
+  }, [handleNavbarKeyDown])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -268,7 +316,6 @@ function Navbar() {
           borderBottom: '1px solid #e1e5e9',
           boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)',
           padding: '0 2rem',
-          marginBottom: '1rem',
           position: 'relative'
         }}
         role="navigation"
@@ -289,48 +336,7 @@ function Navbar() {
             alignItems: 'center'
           }}>
 
-          {/* Logo/Brand */}
-          <Link
-            to="/"
-            style={{
-              fontWeight: '600',
-              fontSize: '1.25rem',
-              color: '#2c3e50',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              padding: '0.5rem 1rem',
-              borderRadius: '6px',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              display: 'block'
-            }}
-            tabIndex="0"
-            role="banner"
-            aria-label="Job Card System - Go to Home"
-            onFocus={(e) => {
-              e.target.style.backgroundColor = '#f8f9fa'
-              e.target.style.border = '2px solid #3498db'
-              e.target.style.boxShadow = '0 2px 4px rgba(52, 152, 219, 0.2)'
-            }}
-            onBlur={(e) => {
-              e.target.style.backgroundColor = 'transparent'
-              e.target.style.border = '2px solid transparent'
-              e.target.style.boxShadow = 'none'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#f8f9fa'
-              e.target.style.border = '2px solid #3498db'
-              e.target.style.boxShadow = '0 2px 4px rgba(52, 152, 219, 0.2)'
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'transparent'
-              e.target.style.border = '2px solid transparent'
-              e.target.style.boxShadow = 'none'
-            }}
-            title="Go to Home Page (Press Enter when focused)"
-          >
-            🏢 Job Card System
-          </Link>
+
             {navItems.map((item, index) => (
               <div key={item.path} style={{ position: 'relative' }}>
                                  {!item.hasDropdown ? (
@@ -390,16 +396,15 @@ function Navbar() {
                      aria-haspopup={item.hasDropdown ? 'true' : 'false'}
                      aria-expanded={item.hasDropdown && openDropdown === item.label ? 'true' : 'false'}
                    >
-                     {item.label}
-                     {item.hasDropdown && (
                        <span style={{ 
-                         marginLeft: '0.25rem',
-                         color: openDropdown === item.label ? '#3498db' : '#5a6c7d',
-                         fontWeight: openDropdown === item.label ? 'bold' : 'normal'
-                       }}>
-                         {openDropdown === item.label ? '▼' : '▼'}
+                       fontWeight: 'bold', 
+                       color: '#3498db', 
+                       marginRight: '0.5rem',
+                       fontSize: '0.8rem'
+                     }}>
+                       {item.number}.
                        </span>
-                     )}
+                     {item.label}
                    </button>
                  )}
 
@@ -427,16 +432,6 @@ function Navbar() {
                      }}
                        role="menu"
                      >
-                                            {/* Instructions */}
-                     <div style={{
-                       padding: '0.375rem 1rem',
-                       fontSize: '0.8rem',
-                       color: '#6c757d',
-                       borderBottom: '1px solid #e9ecef',
-                       backgroundColor: '#f8f9fa'
-                     }}>
-                       {`Press letter keys (A-${String.fromCharCode(65 + currentDropdownItems.length - 1)}) or use arrow keys to navigate`}
-                     </div>
                        {currentDropdownItems.map((dropdownItem) => (
                                                 <Link
                            key={dropdownItem.path}
@@ -481,6 +476,49 @@ function Navbar() {
               </div>
           ))}
         </div>
+
+        {/* Logo/Brand */}
+        <Link
+          to="/"
+          style={{
+            fontWeight: '600',
+            fontSize: '1.25rem',
+            color: '#2c3e50',
+            cursor: 'pointer',
+            textDecoration: 'none',
+            padding: '0.5rem 1rem',
+            borderRadius: '6px',
+            transition: 'all 0.2s ease',
+            outline: 'none',
+            display: 'block'
+          }}
+          tabIndex="0"
+          role="banner"
+          aria-label="Job Card System - Go to Home"
+          onFocus={(e) => {
+            e.target.style.backgroundColor = '#f8f9fa'
+            e.target.style.border = '2px solid #3498db'
+            e.target.style.boxShadow = '0 2px 4px rgba(52, 152, 219, 0.2)'
+          }}
+          onBlur={(e) => {
+            e.target.style.backgroundColor = 'transparent'
+            e.target.style.border = '2px solid transparent'
+            e.target.style.boxShadow = 'none'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = '#f8f9fa'
+            e.target.style.border = '2px solid #3498db'
+            e.target.style.boxShadow = '0 2px 4px rgba(52, 152, 219, 0.2)'
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = 'transparent'
+            e.target.style.border = '2px solid transparent'
+            e.target.style.boxShadow = 'none'
+          }}
+          title="Go to Home Page (Press Enter when focused)"
+        >
+          🏢 Job Card 
+        </Link>
       </div>
     </nav>
 

@@ -21,13 +21,18 @@ export async function createInwardLC(payload) {
   return handleResponse(res);
 }
 
-export async function fetchInwardLCList() {
-  const res = await fetch(RESOURCE, { method: 'GET' });
+export async function fetchInwardLCList(page = 1, limit = 10, search = '') {
+  const params = new URLSearchParams();
+  if (page) params.append('page', page);
+  if (limit) params.append('limit', limit);
+  if (search) params.append('search', search);
+  
+  const res = await fetch(`${RESOURCE}?${params.toString()}`, { method: 'GET' });
   return handleResponse(res);
 }
 
-export async function fetchNextGrnNo() {
-  const res = await fetch(`${RESOURCE}/next-grn`, { method: 'GET' });
+export async function fetchInwardLCById(id) {
+  const res = await fetch(`${RESOURCE}/${id}`, { method: 'GET' });
   return handleResponse(res);
 }
 
@@ -42,6 +47,15 @@ export async function updateInwardLC(id, payload) {
 
 export async function deleteInwardLC(id) {
   const res = await fetch(`${RESOURCE}/${id}`, { method: 'DELETE' });
+  return handleResponse(res);
+}
+
+export async function deleteMultipleInwardLC(ids) {
+  const res = await fetch(`${RESOURCE}/bulk`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
   return handleResponse(res);
 }
 

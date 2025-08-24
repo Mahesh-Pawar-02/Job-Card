@@ -57,22 +57,39 @@ app.use('*', (req, res) => {
 
 // Test DB connection and create table on startup
 (async () => {
-  await testConnection();
-  await createPartyMasterTable();
-  await createProcessMasterTable();
-  await seedProcessMaster();
-  await createItemMasterTable();
-  await createUnitMasterTable();
-  await seedUnitMaster();
-  await createStateMasterTable();
-  await seedStateMaster();
-  await createTaxMasterTable();
-  await seedTaxMaster();
-  await createCategoryMasterTable();
-  await seedCategoryMaster();
-  await createInwardLCChallanTable();
-  await createInwardLCGrnSeqTable();
-  await seedInwardLCChallan();
+  try {
+    console.log('🔌 Testing database connection...');
+    const connectionResult = await testConnection();
+    
+    if (!connectionResult) {
+      console.error('❌ Database connection failed. Please check your database configuration.');
+      console.error('Make sure MySQL is running and the database credentials are correct.');
+      process.exit(1);
+    }
+    
+    console.log('📋 Creating database tables...');
+    await createPartyMasterTable();
+    await createProcessMasterTable();
+    await seedProcessMaster();
+    await createItemMasterTable();
+    await createUnitMasterTable();
+    await seedUnitMaster();
+    await createStateMasterTable();
+    await seedStateMaster();
+    await createTaxMasterTable();
+    await seedTaxMaster();
+    await createCategoryMasterTable();
+    await seedCategoryMaster();
+    await createInwardLCChallanTable();
+    await createInwardLCGrnSeqTable();
+    await seedInwardLCChallan();
+    
+    console.log('✅ All database tables created successfully!');
+  } catch (error) {
+    console.error('❌ Error during database initialization:', error);
+    console.error('Please check your database configuration and try again.');
+    process.exit(1);
+  }
 })();
 
 // Start server
