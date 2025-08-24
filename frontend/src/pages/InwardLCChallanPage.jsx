@@ -1,324 +1,554 @@
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import InwardLCChallanForm from '../components/InwardLCChallanForm.jsx'
-import { fetchAllParties } from '../services/partyMasterApi.js'
-import { fetchAllItems } from '../services/itemMasterApi.js'
-import { fetchAllProcesses } from '../services/processMasterApi.js'
-import { createInwardLC, fetchInwardLCList, deleteInwardLC, updateInwardLC } from '../services/inwardLCChallanApi.js'
+import React, { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
+import InwardLCChallanForm from '../components/InwardLCChallanForm'
+import { 
+  fetchInwardLCList, 
+  createInwardLC, 
+  updateInwardLC, 
+  deleteInwardLC, 
+  fetchInwardLCById,
+  deleteMultipleInwardLC
+} from '../services/inwardLCChallanApi'
+import { 
+  handleApiResponse, 
+  handleApiError, 
+  showSuccessToast, 
+  showErrorToast, 
+  showInfoToast, 
+  showWarningToast, 
+  showLoadingToast, 
+  updateLoadingToast 
+} from '../utils/toastUtils'
+
+// Icons for action buttons
+const ViewIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+)
+
+const EditIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+)
+
+const DeleteIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 6h18"/>
+    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+  </svg>
+)
+
+const PrintIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="6,9 6,2 18,2 18,9"/>
+    <path d="M6,18H4a2,2,0,0,1-2-2V11a2,2,0,0,1,2-2H20a2,2,0,0,1,2,2v5a2,2,0,0,1-2,2H18"/>
+    <polyline points="6,14,6,18,18,18,18,14"/>
+  </svg>
+)
 
 function InwardLCChallanPage() {
-  const navigate = useNavigate()
-  const [parties, setParties] = useState([])
-  const [items, setItems] = useState([])
-  const [processes, setProcesses] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [rows, setRows] = useState([])
-  const [viewRow, setViewRow] = useState(null)
-  const [editingRow, setEditingRow] = useState(null)
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [printRow, setPrintRow] = useState(null)
-  const [selectedIndex, setSelectedIndex] = useState(-1)
-  const [grnSearch, setGrnSearch] = useState('')
-  const tableContainerRef = useRef(null)
+  const [inwards, setInwards] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [editingInward, setEditingInward] = useState(null)
+  const [selectedInward, setSelectedInward] = useState(null)
+  const [selectedRows, setSelectedRows] = useState([])
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  
+  // Search and filter state
+  const [searchTerm, setSearchTerm] = useState('')
 
-  useEffect(() => {
-    let isMounted = true
-    setLoading(true)
-    setError('')
-    Promise.all([fetchAllParties(), fetchAllItems(), fetchAllProcesses(), fetchInwardLCList()])
-      .then(([p, i, pr, list]) => {
-        if (!isMounted) return
-        setParties(Array.isArray(p) ? p : [])
-        setItems(Array.isArray(i) ? i : [])
-        setProcesses(Array.isArray(pr) ? pr : [])
-        const arr = Array.isArray(list) ? list : []
-        setRows(arr)
-        setSelectedIndex(arr.length > 0 ? 0 : -1)
-      })
-      .catch(err => {
-        if (!isMounted) return
-        setError(err?.message || 'Failed to load data')
-      })
-      .finally(() => {
-        if (!isMounted) return
-        setLoading(false)
-      })
-    return () => { isMounted = false }
-  }, [])
-
-  // Keyboard navigation for row selection
-  useEffect(() => {
-    const el = tableContainerRef.current
-    if (!el) return
-    const handleKeyDown = (e) => {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setSelectedIndex(prev => {
-          if (rows.length === 0) return -1
-          const next = Math.min((prev < 0 ? -1 : prev) + 1, rows.length - 1)
-          return next
-        })
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setSelectedIndex(prev => {
-          if (rows.length === 0) return -1
-          const next = Math.max((prev < 0 ? 0 : prev) - 1, 0)
-          return next
-        })
-      }
-    }
-    el.addEventListener('keydown', handleKeyDown)
-    return () => el.removeEventListener('keydown', handleKeyDown)
-  }, [rows.length])
-
-  async function handleSubmit(payload) {
+  // Load data function
+  const loadData = useCallback(async (page = 1, limit = 10, search = '') => {
     try {
-      setSubmitting(true)
-      if (editingRow?.id) {
-        // Update existing inward
-        const updated = await updateInwardLC(editingRow.id, payload)
-        const refreshedList = await fetchInwardLCList()
-        setRows(refreshedList)
-        setEditingRow(null)
-        setIsFormOpen(false)
+    setLoading(true)
+      const response = await fetchInwardLCList(page, limit, search)
+      
+      if (response.success) {
+        setInwards(response.data)
+        setTotalPages(response.pagination.totalPages)
+        setTotalItems(response.pagination.totalItems)
+        setCurrentPage(response.pagination.currentPage)
+        setItemsPerPage(response.pagination.itemsPerPage)
       } else {
-        // Create new inward, user provides GRN No
-        const created = await createInwardLC(payload)
-        const refreshedList = await fetchInwardLCList()
-        setRows(refreshedList)
-        setIsFormOpen(false)
+        showErrorToast(response.error || 'Failed to load inwards')
       }
-    } catch (e) {
-      setError(e?.message || 'Failed to save')
+    } catch (error) {
+      handleApiError(error, 'Failed to load inwards')
     } finally {
-      setSubmitting(false)
+        setLoading(false)
+    }
+  }, [])
+
+  // Load data on component mount
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  // Handle refresh - reset all filters and show default list
+  const handleRefresh = () => {
+    setSearchTerm('')
+    setCurrentPage(1)
+    loadData(1, itemsPerPage, '')
+  }
+
+  // Handle search
+  const handleSearch = () => {
+    setCurrentPage(1)
+    loadData(1, itemsPerPage, searchTerm)
+  }
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    loadData(page, itemsPerPage, searchTerm)
+  }
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (newLimit) => {
+    setItemsPerPage(newLimit)
+    setCurrentPage(1)
+    loadData(1, newLimit, searchTerm)
+  }
+
+  // Handle form submit (create/update)
+  const handleSubmit = async (formData) => {
+    const loadingToast = showLoadingToast(editingInward ? 'Updating inward...' : 'Creating inward...')
+    
+    try {
+      let response
+      if (editingInward) {
+        response = await updateInwardLC(editingInward.id, formData)
+        if (response.success) {
+          updateLoadingToast(loadingToast, 'success', 'Inward updated successfully!')
+          setShowForm(false)
+          setEditingInward(null)
+          loadData(currentPage, itemsPerPage, searchTerm)
+        }
+      } else {
+        response = await createInwardLC(formData)
+        if (response.success) {
+          updateLoadingToast(loadingToast, 'success', 'Inward created successfully!')
+          setShowForm(false)
+          loadData(currentPage, itemsPerPage, searchTerm)
+        }
+      }
+      
+      if (!response.success) {
+        updateLoadingToast(loadingToast, 'error', response.error || 'Operation failed')
+      }
+    } catch (error) {
+      updateLoadingToast(loadingToast, 'error', 'Operation failed. Please try again.')
     }
   }
 
-  function handleInsert() {
-    // If you use this for adding parts, make sure it does NOT call createInwardLC for new GRN
-    // Or remove this function if not needed
+  // Handle delete
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this inward?')) return
+    
+    const loadingToast = showLoadingToast('Deleting inward...')
+    
+    try {
+      const response = await deleteInwardLC(id)
+      if (response.success) {
+        updateLoadingToast(loadingToast, 'success', 'Inward deleted successfully!')
+        if (selectedInward && selectedInward.id === id) {
+          setSelectedInward(null)
+        }
+        loadData(currentPage, itemsPerPage, searchTerm)
+      } else {
+        updateLoadingToast(loadingToast, 'error', response.error || 'Failed to delete inward')
+      }
+    } catch (error) {
+      updateLoadingToast(loadingToast, 'error', 'Failed to delete inward. Please try again.')
+    }
   }
 
-  function handleCancel() {
-    setIsFormOpen(false)
-    setEditingRow(null)
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedRows.length === 0) {
+      showWarningToast('Please select inwards to delete')
+      return
+    }
+    
+    if (!window.confirm(`Are you sure you want to delete ${selectedRows.length} selected inwards?`)) return
+    
+    const loadingToast = showLoadingToast(`Deleting ${selectedRows.length} inwards...`)
+    
+    try {
+      const response = await deleteMultipleInwardLC(selectedRows)
+      if (response.success) {
+        updateLoadingToast(loadingToast, 'success', response.message || 'Inwards deleted successfully!')
+        setSelectedRows([])
+        if (selectedInward && selectedRows.includes(selectedInward.id)) {
+          setSelectedInward(null)
+        }
+        loadData(currentPage, itemsPerPage, searchTerm)
+      } else {
+        updateLoadingToast(loadingToast, 'error', response.error || 'Failed to delete inwards')
+      }
+    } catch (error) {
+      updateLoadingToast(loadingToast, 'error', 'Failed to delete inwards. Please try again.')
+    }
   }
 
-  function handlePrint(row) {
-    setPrintRow(row)
-    setTimeout(() => window.print(), 0)
+  // Handle view inward details
+  const handleViewInward = async (id) => {
+    try {
+      const response = await fetchInwardLCById(id)
+      if (response.success) {
+        setSelectedInward(response.data)
+      } else {
+        showErrorToast(response.error || 'Failed to load inward details')
+      }
+    } catch (error) {
+      handleApiError(error, 'Failed to load inward details')
+    }
   }
 
-  useEffect(() => {
-    function onAfterPrint() { setPrintRow(null) }
-    window.addEventListener('afterprint', onAfterPrint)
-    return () => window.removeEventListener('afterprint', onAfterPrint)
-  }, [])
-
-  function handleSearchGrn() {
-    const q = grnSearch.trim()
-    if (!q) return
-    const idx = rows.findIndex(r => String(r.grn_no).toLowerCase() === q.toLowerCase())
-    if (idx >= 0) setSelectedIndex(idx)
+  // Handle edit
+  const handleEdit = (inward) => {
+    setEditingInward(inward)
+    setShowForm(true)
   }
 
-  const selectedRow = selectedIndex >= 0 ? rows[selectedIndex] : null
+  // Handle row selection
+  const handleRowSelect = (id) => {
+    setSelectedRows(prev => 
+      prev.includes(id) 
+        ? prev.filter(rowId => rowId !== id)
+        : [...prev, id]
+    )
+  }
 
-  if (loading) return <div>Loading...</div>
-  if (error) return <div style={{ color: 'red' }}>{error}</div>
+  // Handle select all
+  const handleSelectAll = () => {
+    if (selectedRows.length === inwards.length) {
+      setSelectedRows([])
+    } else {
+      setSelectedRows(inwards.map(inward => inward.id))
+    }
+  }
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return '-'
+    return new Date(dateString).toLocaleDateString('en-GB')
+  }
 
   return (
-    <div>
-      <div style={{
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-end',
-  marginBottom: '1.5rem',
-  flexWrap: 'wrap'
-}}>
-  <h2 style={{ margin: 0, fontWeight: 700, color: '#2c3e50', letterSpacing: 1 }}>Inward Challan for L/C</h2>
-  <div style={{
-    display: 'flex',
-    gap: 12,
-    alignItems: 'center',
-    background: '#f8f9fa',
-    padding: '12px 18px',
-    borderRadius: 8,
-    boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
-  }}>
-    <input
-      className="input"
-      placeholder="Search GRN No"
-      value={grnSearch}
-      onChange={e => setGrnSearch(e.target.value)}
-      onKeyDown={e => { if (e.key === 'Enter') handleSearchGrn() }}
-      style={{
-        width: 180,
-        padding: '8px 12px',
-        border: '1px solid #d1d5db',
-        borderRadius: 6,
-        fontSize: 15
-      }}
-    />
+    <div className="inward-page">
+      <div className="page-header">
+        <h1>Inward LC Challan Management</h1>
+        <div className="header-actions">
     <button
-      className="btn btn-outline-secondary btn-sm"
-      type="button"
-      onClick={handleSearchGrn}
-      style={{
-        padding: '6px 18px',
-        fontSize: 15,
-        borderRadius: 6,
-        border: '1px solid #6c757d',
-        background: '#fff',
-        color: '#2c3e50',
-        fontWeight: 500
-      }}
-    >
-      Search
+            className="btn btn-primary btn-sm"
+            onClick={() => {
+              setShowForm(true)
+              setEditingInward(null)
+            }}
+          >
+            + Add New Inward
     </button>
     <button
-      className="btn btn-primary"
-      title="New"
-      onClick={() => { setEditingRow(null); setIsFormOpen(true) }}
-      style={{
-        padding: '8px 22px',
-        fontSize: 16,
-        borderRadius: 6,
-        background: 'linear-gradient(90deg,#007bff 60%,#0056b3 100%)',
-        color: '#fff',
-        fontWeight: 600,
-        boxShadow: '0 2px 8px rgba(0,123,255,0.08)',
-        border: 'none'
-      }}
-    >
-      + New
+            className="btn btn-secondary btn-sm"
+            onClick={handleRefresh}
+            disabled={loading}
+          >
+            {loading ? 'Refreshing...' : 'Refresh'}
     </button>
   </div>
 </div>
 
-      {isFormOpen && (
-        <InwardLCChallanForm
-          parties={parties}
-          items={items}
-          processes={processes}
-          onSubmit={handleSubmit}
-          onInsert={handleInsert}
-          onCancel={handleCancel}
-          isSubmitting={submitting}
-          submitLabel={editingRow ? 'Update' : 'Save'}
-          initialValues={editingRow || {}}
-        />
-      )}
-      <div className="card" ref={tableContainerRef} tabIndex="0" style={{ marginTop: '16px' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      {/* Search and Filter Controls */}
+      <div className="search-filter-section">
+        <div className="refresh-group">
+          <button 
+            className="btn btn-outline-secondary btn-sm"
+            onClick={handleRefresh}
+            disabled={loading}
+            title="Refresh and reset all filters"
+          >
+            🔄 Refresh
+          </button>
+        </div>
+
+        <div className="search-group">
+          <input
+            type="text"
+            placeholder="Search by GRN number..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+          />
+          <button className="btn btn-secondary" onClick={handleSearch}>
+            Search
+          </button>
+        </div>
+
+        {selectedRows.length > 0 && (
+          <button 
+            className="btn btn-danger"
+            onClick={handleBulkDelete}
+          >
+            Delete Selected ({selectedRows.length})
+          </button>
+        )}
+      </div>
+
+      {/* Total Count Display */}
+      <div className="total-count-section">
+        <span className="total-count">Total Inwards: {totalItems}</span>
+      </div>
+
+      {/* Main Content - Split Layout */}
+      <div className="main-content">
+        {/* Left Side - List */}
+        <div className="list-section">
+          <div className="table-container">
+            {loading ? (
+              <div className="loading">Loading inwards...</div>
+            ) : (
+              <table className="data-table">
           <thead>
             <tr>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '8px' }}>GRN No</th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '8px' }}>Date</th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '8px' }}>Supplier Name</th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '8px' }}>Actions</th>
+                    <th style={{ width: '40px' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.length === inwards.length && inwards.length > 0}
+                        onChange={handleSelectAll}
+                      />
+                    </th>
+                    <th style={{ width: '100px' }}>GRN No</th>
+                    <th style={{ width: '120px' }}>GRN Date</th>
+                    <th style={{ width: '100px' }}>Supplier</th>
+                    <th style={{ width: '120px' }}>Challan No</th>
+                    <th style={{ width: '120px' }}>Challan Date</th>
+                    <th style={{ width: '140px' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+                  {inwards.length === 0 ? (
               <tr>
-                <td colSpan={4} style={{ padding: '12px', textAlign: 'center' }}>No records</td>
+                      <td colSpan="7" className="no-data">
+                        No inwards found
+                      </td>
               </tr>
             ) : (
-              rows.map((r, idx) => (
-                <tr key={r.grn_no} style={{ cursor: 'pointer', background: selectedIndex === idx ? '#f8f9fa' : 'transparent' }}>
-                  <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>{r.grn_no}</td>
-                  <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>{r.grn_date?.slice?.(0,10)}</td>
-                  <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px' }}>
-                    {(parties.find(p => (p.id||p._id) == r.supplier_id)?.party_name) || r.supplier_id}
+                    inwards.map((inward) => (
+                      <tr key={inward.id} className={selectedInward?.id === inward.id ? 'selected-row' : ''}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedRows.includes(inward.id)}
+                            onChange={() => handleRowSelect(inward.id)}
+                          />
                   </td>
-                  <td style={{ borderBottom: '1px solid #f0f0f0', padding: '8px', minWidth: 180 }}>
-                    <button className="btn btn-outline-warning btn-sm" title="Edit" onClick={() => { setSelectedIndex(idx); setEditingRow(r); setIsFormOpen(true); }}>Edit</button>{' '}
-                    <button className="btn btn-outline-danger btn-sm" title="Delete" onClick={async () => { 
-                      if (window.confirm('Delete this GRN and all its parts?')) { 
-                        const response = await fetch(`/api/inward-lc-challan/grn/${r.grn_no}`, { method: 'DELETE' });
-                        if (response.ok) {
-                          setRows(prev => prev.filter(x => x.grn_no !== r.grn_no));
-                          setSelectedIndex(-1);
-                        }
-                      }
-                    }}>Delete</button>{' '}
-                    <button className="btn btn-outline-secondary btn-sm" title="View" onClick={() => { setSelectedIndex(idx); setViewRow(r); }}>View</button>{' '}
-                    <button className="btn btn-outline-primary btn-sm" title="Print" onClick={() => { setSelectedIndex(idx); handlePrint(r); }}>Print</button>
+                        <td>{inward.grn_no}</td>
+                        <td>{formatDate(inward.grn_date)}</td>
+                        <td>{inward.supplier_id}</td>
+                        <td>{inward.challan_no}</td>
+                        <td>{formatDate(inward.challan_date)}</td>
+                        <td className="actions">
+                          <button
+                            className="btn-icon btn-view"
+                            onClick={() => handleViewInward(inward.id)}
+                            title="View Details"
+                          >
+                            <ViewIcon />
+                          </button>
+                          <button
+                            className="btn-icon btn-edit"
+                            onClick={() => handleEdit(inward)}
+                            title="Edit"
+                          >
+                            <EditIcon />
+                          </button>
+                          <button
+                            className="btn-icon btn-delete"
+                            onClick={() => handleDelete(inward.id)}
+                            title="Delete"
+                          >
+                            <DeleteIcon />
+                          </button>
+                          <button
+                            className="btn-icon btn-print"
+                            onClick={() => window.print()}
+                            title="Print"
+                          >
+                            <PrintIcon />
+                          </button>
                   </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+            )}
+          </div>
+
+          {/* Pagination */}
+          <div className="pagination">
+            <div className="pagination-info">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
+            </div>
+            
+            <div className="pagination-controls">
+              <select 
+                value={itemsPerPage} 
+                onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
+              >
+                <option value={10}>10 per page</option>
+                <option value={25}>25 per page</option>
+                <option value={50}>50 per page</option>
+                <option value={100}>100 per page</option>
+              </select>
+              
+              <button 
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="btn btn-secondary"
+              >
+                Previous
+              </button>
+              
+              <span className="page-info">
+                Page {currentPage} of {totalPages}
+              </span>
+              
+              <button 
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="btn btn-secondary"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side - Details */}
+        <div className="details-section">
+          {selectedInward ? (
+            <div className="inward-details">
+              <div className="details-header">
+                <h3>Inward Details</h3>
+                <button 
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setSelectedInward(null)}
+                >
+                  × Close
+                </button>
       </div>
 
-      {viewRow && (
-        <div style={{ marginTop: '16px', border: '1px solid #e5e5e5', borderRadius: 6, padding: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0 }}>Inward L/C Challan</h3>
-            <button className="btn btn-secondary btn-sm" onClick={() => setViewRow(null)}>Close</button>
+              <div className="details-content">
+                <div className="detail-row">
+                  <label>GRN Number:</label>
+                  <span>{selectedInward.grn_no}</span>
+                </div>
+                <div className="detail-row">
+                  <label>GRN Date:</label>
+                  <span>{formatDate(selectedInward.grn_date)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>Supplier ID:</label>
+                  <span>{selectedInward.supplier_id}</span>
+                </div>
+                <div className="detail-row">
+                  <label>Challan Number:</label>
+                  <span>{selectedInward.challan_no}</span>
+                </div>
+                <div className="detail-row">
+                  <label>Challan Date:</label>
+                  <span>{formatDate(selectedInward.challan_date)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>Item ID:</label>
+                  <span>{selectedInward.item_id}</span>
+                </div>
+                <div className="detail-row">
+                  <label>Item Name:</label>
+                  <span>{selectedInward.item_name}</span>
+                </div>
+                <div className="detail-row">
+                  <label>Process ID:</label>
+                  <span>{selectedInward.process_id}</span>
+                </div>
+                <div className="detail-row">
+                  <label>Quantity:</label>
+                  <span>{selectedInward.qty}</span>
+                </div>
+                <div className="detail-row">
+                  <label>Created At:</label>
+                  <span>{formatDate(selectedInward.created_at)}</span>
+                </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(260px, 1fr))', gap: '8px', marginTop: '8px' }}>
-            {[
-              ['grn_no', 'GRN No'],
-              ['grn_date', 'GRN Date'],
-              ['supplier_id', 'Supplier'],
-              ['challan_no', 'Challan No'],
-              ['challan_date', 'Challan Date'],
-              ['item_id', 'Item'],
-              ['item_name', 'Item Name'],
-              ['process_id', 'Process'],
-              ['qty', 'Qty'],
-            ].map(([key, label]) => (
-              <div key={key} style={{ display: 'flex', gap: '8px' }}>
-                <div style={{ width: 180, color: '#555' }}>{label}</div>
-                <div style={{ flex: 1, fontWeight: 500 }}>
-                  {key === 'supplier_id' ? (parties.find(p => (p.id||p._id) == viewRow.supplier_id)?.party_name || viewRow.supplier_id)
-                    : key === 'item_id' ? (items.find(i => (i.id||i._id) == viewRow.item_id)?.part_number || viewRow.item_id)
-                    : key === 'process_id' ? (processes.find(p => (p.id||p._id) == viewRow.process_id)?.process_name || '')
-                    : (String(viewRow?.[key] ?? '').slice(0, 10))}
+              
+              <div className="details-actions">
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => handleEdit(selectedInward)}
+                >
+                  Edit Inward
+                </button>
+                <button 
+                  className="btn btn-danger"
+                  onClick={() => handleDelete(selectedInward.id)}
+                >
+                  Delete Inward
+                </button>
                 </div>
               </div>
-            ))}
+          ) : (
+            <div className="no-selection">
+              <div className="no-selection-content">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <p>Select an inward from the list to view details</p>
           </div>
         </div>
       )}
-
-      {/* Print-only content */}
-      {printRow && (
-        <>
-          <style>{`@media print { body * { visibility: hidden; } #print-area, #print-area * { visibility: visible; } #print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 16px; } }`}</style>
-          <div id="print-area">
-            <h2 style={{ marginTop: 0 }}>Inward Challan for L/C</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(260px, 1fr))', gap: '8px' }}>
-              {[
-                ['grn_no', 'GRN No'],
-                ['grn_date', 'GRN Date'],
-                ['supplier_id', 'Supplier'],
-                ['challan_no', 'Challan No'],
-                ['challan_date', 'Challan Date'],
-                ['item_id', 'Item No'],
-                ['item_name', 'Item Name'],
-                ['process_id', 'Process'],
-                ['qty', 'Quantity'],
-              ].map(([key, label]) => (
-                <div key={key} style={{ display: 'flex', gap: '8px' }}>
-                  <div style={{ width: 180 }}>{label}</div>
-                  <div style={{ flex: 1, fontWeight: 600 }}>
-                    {key === 'supplier_id' ? (parties.find(p => (p.id||p._id) == printRow.supplier_id)?.party_name || printRow.supplier_id)
-                      : key === 'item_id' ? (items.find(i => (i.id||i._id) == printRow.item_id)?.part_number || printRow.item_id)
-                      : key === 'process_id' ? (processes.find(p => (p.id||p._id) == printRow.process_id)?.process_name || '')
-                      : String(printRow?.[key] ?? '').slice(0, 10)}
                   </div>
                 </div>
-              ))}
+
+      {/* Form Modal */}
+      {showForm && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>{editingInward ? 'Edit Inward' : 'Add New Inward'}</h2>
+              <button 
+                className="close-btn"
+                onClick={() => {
+                  setShowForm(false)
+                  setEditingInward(null)
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <InwardLCChallanForm
+              onSubmit={handleSubmit}
+              initialData={editingInward}
+              onCancel={() => {
+                setShowForm(false)
+                setEditingInward(null)
+              }}
+            />
             </div>
           </div>
-        </>
       )}
     </div>
   )

@@ -1,4 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 import Navbar from './components/Navbar.jsx'
 import HomePage from './pages/HomePage.jsx'
 import PartyMasterPage from './pages/PartyMasterPage.jsx'
@@ -37,6 +39,20 @@ function App() {
             <Route path="/exit" element={<div>Exit Page</div>} />
           </Routes>
         </div>
+        
+        {/* Toast Container for notifications */}
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
       </div>
     </BrowserRouter>
   )
