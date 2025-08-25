@@ -1,99 +1,33 @@
 const express = require('express');
+const bodyParser = require('body-parser');
 const cors = require('cors');
-const dotenv = require('dotenv');
-const { testConnection, createPartyMasterTable, createProcessMasterTable, seedProcessMaster, createItemMasterTable, createUnitMasterTable, seedUnitMaster, createStateMasterTable, seedStateMaster, createTaxMasterTable, seedTaxMaster, createCategoryMasterTable, seedCategoryMaster, createInwardLCChallanTable, seedInwardLCChallan, createInwardLCGrnSeqTable } = require('./config/database');
+const { testConnection } = require('./config/database.js');
 
-// Load environment variables
-dotenv.config();
+// Import Routes
+const inwardRoutes = require('./routes/inwardRoutes');
+const customerRoutes = require('./routes/customerRoutes');
+const partRoutes = require('./routes/partRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+app.use(bodyParser.json());
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// ✅ Enable CORS (allow frontend to call backend)
+app.use(cors({
+  origin: 'http://localhost:5173',  // your vite dev server
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type']
+}));
 
-// Basic route for testing
-app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to the Backend API!' });
-});
+// Routes
+app.use('/api/inwards', inwardRoutes);
+app.use('/api/customers', customerRoutes); // 🔹 added
+app.use('/api/parts', partRoutes);         // 🔹 added
 
-// Health check route
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
-// Import partyMaster routes
-const partyMasterRoutes = require('./routes/partyMasterRoutes');
-const processMasterRoutes = require('./routes/processMasterRoutes');
-const itemMasterRoutes = require('./routes/itemMasterRoutes');
-const unitMasterRoutes = require('./routes/unitMasterRoutes');
-const stateMasterRoutes = require('./routes/stateMasterRoutes');
-const taxMasterRoutes = require('./routes/taxMasterRoutes');
-const categoryMasterRoutes = require('./routes/categoryMasterRoutes');
-const inwardLCChallanRoutes = require('./routes/inwardLCChallanRoutes');
-
-// Use partyMaster routes
-app.use('/api/party-master', partyMasterRoutes);
-app.use('/api/process-master', processMasterRoutes);
-app.use('/api/item-master', itemMasterRoutes);
-app.use('/api/unit-master', unitMasterRoutes);
-app.use('/api/state-master', stateMasterRoutes);
-app.use('/api/tax-master', taxMasterRoutes);
-app.use('/api/category-master', categoryMasterRoutes);
-app.use('/api/inward-lc-challan', inwardLCChallanRoutes);
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
-});
-
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ message: 'Route not found' });
-});
-
-// Test DB connection and create table on startup
-(async () => {
-  try {
-    console.log('🔌 Testing database connection...');
-    const connectionResult = await testConnection();
-    
-    if (!connectionResult) {
-      console.error('❌ Database connection failed. Please check your database configuration.');
-      console.error('Make sure MySQL is running and the database credentials are correct.');
-      process.exit(1);
-    }
-    
-    console.log('📋 Creating database tables...');
-    await createPartyMasterTable();
-    await createProcessMasterTable();
-    await seedProcessMaster();
-    await createItemMasterTable();
-    await createUnitMasterTable();
-    await seedUnitMaster();
-    await createStateMasterTable();
-    await seedStateMaster();
-    await createTaxMasterTable();
-    await seedTaxMaster();
-    await createCategoryMasterTable();
-    await seedCategoryMaster();
-    await createInwardLCChallanTable();
-    await createInwardLCGrnSeqTable();
-    await seedInwardLCChallan();
-    
-    console.log('✅ All database tables created successfully!');
-  } catch (error) {
-    console.error('❌ Error during database initialization:', error);
-    console.error('Please check your database configuration and try again.');
-    process.exit(1);
-  }
-})();
+// Test DB connection
+testConnection();
 
 // Start server
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-  console.log(`🌐 Server URL: http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
