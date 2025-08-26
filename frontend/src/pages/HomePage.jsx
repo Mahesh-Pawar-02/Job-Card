@@ -1,6 +1,6 @@
 function HomePage() {
   return (
-    <div style={{ padding: '2rem', textAlign: 'center' }}>
+    <div style={{ padding: '2rem', textAlign: 'center', margin: "5rem 1rem" }}>
       <h1 style={{ color: '#333', marginBottom: '1rem' }}>
         Welcome to Job Card System
       </h1>

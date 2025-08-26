@@ -23,8 +23,8 @@ function Navbar() {
     { path: '/masters/category', label: 'Category Master', number: 'A' },
     { path: '/masters/unit', label: 'Unit Master', number: 'B' },
     { path: '/masters/group', label: 'Group Master', number: 'C' },
-    { path: '/masters/item', label: 'Item Master', number: 'D' },
-    { path: '/masters/party', label: 'Party Master', number: 'E' },
+    { path: '/masters/part', label: 'Part Master', number: 'D' },
+    { path: '/masters/customer', label: 'Customer Master', number: 'E' },
     { path: '/masters/tax', label: 'Tax Master', number: 'F' },
     { path: '/masters/process', label: 'Process Master', number: 'G' },
     { path: '/masters/hsn-sac', label: 'HSN/SAC Master', number: 'H' },
@@ -112,13 +112,13 @@ function Navbar() {
       return
     }
 
-    const currentDropdownItems = openDropdown === 'Masters' ? mastersDropdownItems : 
-                               openDropdown === 'Inward' ? inwardDropdownItems :
-                               openDropdown === 'Outward' ? outwardDropdownItems :
-                               openDropdown === 'Reports' ? reportsDropdownItems :
-                               openDropdown === 'GST Reports' ? gstReportsDropdownItems :
-                               openDropdown === 'Outstanding' ? outstandingDropdownItems :
-                               openDropdown === 'Utilities' ? utilitiesDropdownItems : []
+    const currentDropdownItems = openDropdown === 'Masters' ? mastersDropdownItems :
+      openDropdown === 'Inward' ? inwardDropdownItems :
+        openDropdown === 'Outward' ? outwardDropdownItems :
+          openDropdown === 'Reports' ? reportsDropdownItems :
+            openDropdown === 'GST Reports' ? gstReportsDropdownItems :
+              openDropdown === 'Outstanding' ? outstandingDropdownItems :
+                openDropdown === 'Utilities' ? utilitiesDropdownItems : []
 
     switch (e.key) {
       // Main menu shortcuts (1-7) - works globally
@@ -140,7 +140,7 @@ function Navbar() {
           navRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }
         break
-      
+
       // Dropdown item shortcuts (A-Z) - works globally when dropdown is open
       case 'A':
       case 'B':
@@ -179,7 +179,7 @@ function Navbar() {
           }
         }
         break
-      
+
       // Close dropdown with Escape
       case 'Escape':
         if (openDropdown) {
@@ -194,13 +194,13 @@ function Navbar() {
 
   // Local navbar keyboard navigation (for arrow keys and focus management)
   const handleNavbarKeyDown = useCallback((e) => {
-    const currentDropdownItems = openDropdown === 'Masters' ? mastersDropdownItems : 
-                               openDropdown === 'Inward' ? inwardDropdownItems :
-                               openDropdown === 'Outward' ? outwardDropdownItems :
-                               openDropdown === 'Reports' ? reportsDropdownItems :
-                               openDropdown === 'GST Reports' ? gstReportsDropdownItems :
-                               openDropdown === 'Outstanding' ? outstandingDropdownItems :
-                               openDropdown === 'Utilities' ? utilitiesDropdownItems : []
+    const currentDropdownItems = openDropdown === 'Masters' ? mastersDropdownItems :
+      openDropdown === 'Inward' ? inwardDropdownItems :
+        openDropdown === 'Outward' ? outwardDropdownItems :
+          openDropdown === 'Reports' ? reportsDropdownItems :
+            openDropdown === 'GST Reports' ? gstReportsDropdownItems :
+              openDropdown === 'Outstanding' ? outstandingDropdownItems :
+                openDropdown === 'Utilities' ? utilitiesDropdownItems : []
 
     // Handle logo navigation
     if (e.target.getAttribute('aria-label') === 'Job Card System - Go to Home' && e.key === 'Enter') {
@@ -316,22 +316,28 @@ function Navbar() {
           borderBottom: '1px solid #e1e5e9',
           boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)',
           padding: '0 2rem',
-          position: 'relative'
+          position: 'fixed',      // Fix navbar
+          top: 0,                // At the top
+          left: 0,
+          right: 0,
+          zIndex: 10000,         // High z-index to overlay content
+          marginBottom: '50px'
         }}
         role="navigation"
         aria-label="Main navigation"
       >
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
           height: '64px',
           maxWidth: '1200px',
           margin: '0 auto'
         }}>
           {/* Navigation Items */}
-          <div style={{ 
-            display: 'flex', 
+          <div style={{
+            display: 'flex',
             gap: '0.5rem',
             alignItems: 'center'
           }}>
@@ -339,188 +345,187 @@ function Navbar() {
 
             {navItems.map((item, index) => (
               <div key={item.path} style={{ position: 'relative' }}>
-                                 {!item.hasDropdown ? (
-            <Link
-              to={item.path}
-              style={{
-                textDecoration: 'none',
-                       color: location.pathname === item.path ? '#3498db' : '#5a6c7d',
-                       fontWeight: location.pathname === item.path ? '500' : '400',
-                       padding: '0.75rem 1rem',
-                       borderRadius: '6px',
-                       transition: 'all 0.2s ease',
-                       backgroundColor: focusedIndex === index ? '#f8f9fa' : 'transparent',
-                       border: focusedIndex === index ? '2px solid #3498db' : '2px solid transparent',
-                       outline: 'none',
-                       display: 'block',
-                       fontSize: '0.9rem',
-                       cursor: 'pointer'
-                     }}
-                     tabIndex="0"
-                     onFocus={() => setFocusedIndex(index)}
-                     onBlur={() => setFocusedIndex(-1)}
-                     onMouseEnter={() => setFocusedIndex(index)}
-                     onMouseLeave={() => setFocusedIndex(-1)}
-                     role="menuitem"
-            >
-              {item.label}
-            </Link>
-                 ) : (
-                   <button
-                     style={{
-                       textDecoration: 'none',
-                       color: '#5a6c7d',
-                       fontWeight: '400',
-                       padding: '0.75rem 1rem',
-                       borderRadius: '6px',
-                       transition: 'all 0.2s ease',
-                       backgroundColor: focusedIndex === index ? '#f8f9fa' : 'transparent',
-                       border: focusedIndex === index ? '2px solid #3498db' : '2px solid transparent',
-                       outline: 'none',
-                       display: 'block',
-                       fontSize: '0.9rem',
-                       cursor: 'pointer',
-                       fontFamily: 'inherit'
-                     }}
-                     tabIndex="0"
-                     onFocus={() => setFocusedIndex(index)}
-                     onBlur={() => setFocusedIndex(-1)}
-                     onMouseEnter={() => setFocusedIndex(index)}
-                     onMouseLeave={() => setFocusedIndex(-1)}
-                     onClick={() => {
-                       if (item.hasDropdown) {
-                         setOpenDropdown(openDropdown === item.label ? null : item.label)
-                       }
-                     }}
-                     role="menuitem"
-                     aria-haspopup={item.hasDropdown ? 'true' : 'false'}
-                     aria-expanded={item.hasDropdown && openDropdown === item.label ? 'true' : 'false'}
-                   >
-                       <span style={{ 
-                       fontWeight: 'bold', 
-                       color: '#3498db', 
-                       marginRight: '0.5rem',
-                       fontSize: '0.8rem'
-                     }}>
-                       {item.number}.
-                       </span>
-                     {item.label}
-                   </button>
-                 )}
+                {!item.hasDropdown ? (
+                  <Link
+                    to={item.path}
+                    style={{
+                      textDecoration: 'none',
+                      color: location.pathname === item.path ? '#3498db' : '#5a6c7d',
+                      fontWeight: location.pathname === item.path ? '500' : '400',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '6px',
+                      transition: 'all 0.2s ease',
+                      backgroundColor: focusedIndex === index ? '#f8f9fa' : 'transparent',
+                      border: focusedIndex === index ? '2px solid #3498db' : '2px solid transparent',
+                      outline: 'none',
+                      display: 'block',
+                      cursor: 'pointer'
+                    }}
+                    tabIndex="0"
+                    onFocus={() => setFocusedIndex(index)}
+                    onBlur={() => setFocusedIndex(-1)}
+                    onMouseEnter={() => setFocusedIndex(index)}
+                    onMouseLeave={() => setFocusedIndex(-1)}
+                    role="menuitem"
+                  >
+                    {item.label}
+                  </Link>
+                ) : (
+                  <button
+                    style={{
+                      textDecoration: 'none',
+                      color: '#5a6c7d',
+                      fontWeight: '400',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '6px',
+                      transition: 'all 0.2s ease',
+                      backgroundColor: focusedIndex === index ? '#f8f9fa' : 'transparent',
+                      border: focusedIndex === index ? '2px solid #3498db' : '2px solid transparent',
+                      outline: 'none',
+                      display: 'block',
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit'
+                    }}
+                    tabIndex="0"
+                    onFocus={() => setFocusedIndex(index)}
+                    onBlur={() => setFocusedIndex(-1)}
+                    onMouseEnter={() => setFocusedIndex(index)}
+                    onMouseLeave={() => setFocusedIndex(-1)}
+                    onClick={() => {
+                      if (item.hasDropdown) {
+                        setOpenDropdown(openDropdown === item.label ? null : item.label)
+                      }
+                    }}
+                    role="menuitem"
+                    aria-haspopup={item.hasDropdown ? 'true' : 'false'}
+                    aria-expanded={item.hasDropdown && openDropdown === item.label ? 'true' : 'false'}
+                  >
+                    <span style={{
+                      fontWeight: 'bold',
+                      color: '#3498db',
+                      marginRight: '0.5rem',
+                      fontSize: '0.8rem'
+                    }}>
+                      {item.number}.
+                    </span>
+                    {item.label}
+                  </button>
+                )}
 
-                                 {/* Dropdown for all navigation items */}
-                 {item.hasDropdown && openDropdown === item.label && (() => {
-                   const currentDropdownItems = item.label === 'Masters' ? mastersDropdownItems : 
-                                               item.label === 'Inward' ? inwardDropdownItems :
-                                               item.label === 'Outward' ? outwardDropdownItems :
-                                               item.label === 'Reports' ? reportsDropdownItems :
-                                               item.label === 'GST Reports' ? gstReportsDropdownItems :
-                                               item.label === 'Outstanding' ? outstandingDropdownItems :
-                                               item.label === 'Utilities' ? utilitiesDropdownItems : []
-                   return (
-                     <div style={{
-                       position: 'absolute',
-                       top: '100%',
-                       left: '0',
-                       backgroundColor: '#ffffff',
-                       border: '1px solid #e1e5e9',
-                       borderRadius: '6px',
-                       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                       minWidth: '280px',
-                       zIndex: 1000,
-                       padding: '0.25rem 0'
-                     }}
-                       role="menu"
-                     >
-                       {currentDropdownItems.map((dropdownItem) => (
-                                                <Link
-                           key={dropdownItem.path}
-                           to={dropdownItem.path}
-                           style={{
-                             display: 'block',
-                             padding: '0.5rem 1rem',
-                             textDecoration: 'none',
-                             color: '#5a6c7d',
-                             fontSize: '0.9rem',
-                             transition: 'background-color 0.2s ease',
-                             backgroundColor: dropdownFocusedIndex === currentDropdownItems.indexOf(dropdownItem) ? '#f8f9fa' : 'transparent',
-                             border: dropdownFocusedIndex === currentDropdownItems.indexOf(dropdownItem) ? '2px solid #3498db' : '2px solid transparent',
-                             borderRadius: '4px',
-                             margin: '0 0.125rem'
-                           }}
-                           onMouseEnter={e => {
-                             e.target.style.backgroundColor = '#f8f9fa'
-                           }}
-                           onMouseLeave={e => {
-                             if (dropdownFocusedIndex !== currentDropdownItems.indexOf(dropdownItem)) {
-                               e.target.style.backgroundColor = 'transparent'
-                             }
-                           }}
-                           role="menuitem"
-                         >
-                           <span style={{ 
-                             fontWeight: 'bold', 
-                             color: '#3498db', 
-                             marginRight: '0.5rem',
-                             minWidth: '1.5rem',
-                             display: 'inline-block'
-                           }}>
-                             {dropdownItem.number}.
-                           </span>
-                           {dropdownItem.label}
-                                                  </Link>
-                       ))}
-                     </div>
-                   )
-                 })()}
+                {/* Dropdown for all navigation items */}
+                {item.hasDropdown && openDropdown === item.label && (() => {
+                  const currentDropdownItems = item.label === 'Masters' ? mastersDropdownItems :
+                    item.label === 'Inward' ? inwardDropdownItems :
+                      item.label === 'Outward' ? outwardDropdownItems :
+                        item.label === 'Reports' ? reportsDropdownItems :
+                          item.label === 'GST Reports' ? gstReportsDropdownItems :
+                            item.label === 'Outstanding' ? outstandingDropdownItems :
+                              item.label === 'Utilities' ? utilitiesDropdownItems : []
+                  return (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: '0',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e1e5e9',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                      minWidth: '280px',
+                      zIndex: 1000,
+                      padding: '0.25rem 0'
+                    }}
+                      role="menu"
+                    >
+                      {currentDropdownItems.map((dropdownItem) => (
+                        <Link
+                          key={dropdownItem.path}
+                          to={dropdownItem.path}
+                          style={{
+                            display: 'block',
+                            padding: '0.5rem 1rem',
+                            textDecoration: 'none',
+                            color: '#5a6c7d',
+                            fontSize: '0.9rem',
+                            transition: 'background-color 0.2s ease',
+                            backgroundColor: dropdownFocusedIndex === currentDropdownItems.indexOf(dropdownItem) ? '#f8f9fa' : 'transparent',
+                            border: dropdownFocusedIndex === currentDropdownItems.indexOf(dropdownItem) ? '2px solid #3498db' : '2px solid transparent',
+                            borderRadius: '4px',
+                            margin: '0 0.125rem'
+                          }}
+                          onMouseEnter={e => {
+                            e.target.style.backgroundColor = '#f8f9fa'
+                          }}
+                          onMouseLeave={e => {
+                            if (dropdownFocusedIndex !== currentDropdownItems.indexOf(dropdownItem)) {
+                              e.target.style.backgroundColor = 'transparent'
+                            }
+                          }}
+                          role="menuitem"
+                        >
+                          <span style={{
+                            fontWeight: 'bold',
+                            color: '#3498db',
+                            marginRight: '0.5rem',
+                            minWidth: '1.5rem',
+                            display: 'inline-block'
+                          }}>
+                            {dropdownItem.number}.
+                          </span>
+                          {dropdownItem.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )
+                })()}
               </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Logo/Brand */}
-        <Link
-          to="/"
-          style={{
-            fontWeight: '600',
-            fontSize: '1.25rem',
-            color: '#2c3e50',
-            cursor: 'pointer',
-            textDecoration: 'none',
-            padding: '0.5rem 1rem',
-            borderRadius: '6px',
-            transition: 'all 0.2s ease',
-            outline: 'none',
-            display: 'block'
-          }}
-          tabIndex="0"
-          role="banner"
-          aria-label="Job Card System - Go to Home"
-          onFocus={(e) => {
-            e.target.style.backgroundColor = '#f8f9fa'
-            e.target.style.border = '2px solid #3498db'
-            e.target.style.boxShadow = '0 2px 4px rgba(52, 152, 219, 0.2)'
-          }}
-          onBlur={(e) => {
-            e.target.style.backgroundColor = 'transparent'
-            e.target.style.border = '2px solid transparent'
-            e.target.style.boxShadow = 'none'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.backgroundColor = '#f8f9fa'
-            e.target.style.border = '2px solid #3498db'
-            e.target.style.boxShadow = '0 2px 4px rgba(52, 152, 219, 0.2)'
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.backgroundColor = 'transparent'
-            e.target.style.border = '2px solid transparent'
-            e.target.style.boxShadow = 'none'
-          }}
-          title="Go to Home Page (Press Enter when focused)"
-        >
-          🏢 Job Card 
-        </Link>
-      </div>
-    </nav>
+          {/* Logo/Brand */}
+          <Link
+            to="/"
+            style={{
+              fontWeight: '600',
+              fontSize: '1.25rem',
+              color: '#2c3e50',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              transition: 'all 0.2s ease',
+              outline: 'none',
+              display: 'block'
+            }}
+            tabIndex="0"
+            role="banner"
+            aria-label="Job Card System - Go to Home"
+            onFocus={(e) => {
+              e.target.style.backgroundColor = '#f8f9fa'
+              e.target.style.border = '2px solid #3498db'
+              e.target.style.boxShadow = '0 2px 4px rgba(52, 152, 219, 0.2)'
+            }}
+            onBlur={(e) => {
+              e.target.style.backgroundColor = 'transparent'
+              e.target.style.border = '2px solid transparent'
+              e.target.style.boxShadow = 'none'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#f8f9fa'
+              e.target.style.border = '2px solid #3498db'
+              e.target.style.boxShadow = '0 2px 4px rgba(52, 152, 219, 0.2)'
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = 'transparent'
+              e.target.style.border = '2px solid transparent'
+              e.target.style.boxShadow = 'none'
+            }}
+            title="Go to Home Page (Press Enter when focused)"
+          >
+            🏢 Job Card
+          </Link>
+        </div>
+      </nav>
 
       {/* Skip to main content link for accessibility */}
       <a

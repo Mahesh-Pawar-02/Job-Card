@@ -114,7 +114,7 @@ export default function InwardsPage() {
   };
 
   return (
-    <div>
+    <div style={{ margin: '5rem 1rem' }}>
       <h2>Inwards</h2>
 
       {/* Form */}
@@ -127,7 +127,7 @@ export default function InwardsPage() {
         />
         <Autocomplete
           label="Customer"
-          fetchUrl="http://localhost:5000/api/customers"
+          fetchUrl="http://localhost:5000/api/customers/search/"
           value={form.customer}
           onChange={(val) => setForm({ ...form, customer: val })}
         />
@@ -137,7 +137,7 @@ export default function InwardsPage() {
           <div key={idx} style={{ display: "flex", gap: "10px" }}>
             <Autocomplete
               label="Part"
-              fetchUrl="http://localhost:5000/api/parts"
+              fetchUrl="http://localhost:5000/api/parts/search/"
               value={part}
               onChange={(val) => updatePart(idx, val)}
             />
