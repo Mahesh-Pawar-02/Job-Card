@@ -41,28 +41,37 @@ Associates parts with inward entries (many-to-many relationship).
 ### 4. `part`
 Stores detailed information about each part.
 
-| Field           | Type         | Null | Key | Extra          | Description                         |
-|-----------------|--------------|------|-----|----------------|-------------------------------------|
-| part_id         | int          | NO   | PRI | auto_increment | Unique part ID                      |
-| part_name       | varchar(255) | NO   |     |                | Name of the part                    |
-| material        | varchar(255) | YES  |     |                | Material type                       |
-| drg             | varchar(50)  | YES  |     |                | Drawing number                      |
-| loading         | varchar(255) | YES  |     |                | Loading type                        |
-| broach_spline   | varchar(10)  | YES  |     |                | Broach or spline info               |
-| anti_carb_paste | varchar(10)  | YES  |     |                | Anti-carb paste applied (Y/N)       |
-| case_depth      | varchar(50)  | YES  |     |                | Case depth                          |
-| s_f_hardness    | varchar(50)  | YES  |     |                | Surface hardness                    |
-| wt_pc           | float        | YES  |     |                | Weight per piece                    |
-| total_weight    | float        | YES  |     |                | Total weight                        |
-| batch_qty       | int          | YES  |     |                | Batch quantity                      |
-| patn_no         | varchar(50)  | YES  |     |                | Pattern number                      |
-| hard_temp       | int          | YES  |     |                | Hardening temperature (°C)          |
-| rpm             | int          | YES  |     |                | Machine RPM                         |
-| shot_blasting   | varchar(10)  | YES  |     |                | Shot blasting applied (Y/N)         |
-| punching        | varchar(10)  | YES  |     |                | Punching applied (Y/N)              |
-| part_no         | varchar(255) | YES  |     |                | Part number/code                    |
+| Field               | Type          | Null | Key | Extra           | Description                         |
+| ------------------- | ------------- | ---- | --- | --------------- | ----------------------------------- |
+| part\_id            | int           | NO   | PRI | auto\_increment | Unique part ID                      |
+| customer\_id        | int           | YES  | MUL |                 | Foreign key → customer.customer\_id |
+| part\_name          | varchar(255)  | YES  |     |                 | Name of the part                    |
+| part\_no            | varchar(255)  | YES  |     |                 | Part number/code                    |
+| material            | varchar(255)  | YES  |     |                 | Material type                       |
+| weight              | decimal(10,2) | YES  |     |                 | Weight per piece                    |
+| process             | varchar(255)  | YES  |     |                 | Process name                        |
+| loading             | varchar(255)  | YES  |     |                 | Loading type                        |
+| pasting             | varchar(10)   | YES  |     |                 | Pasting info (Y/N/NA)               |
+| pattern\_no         | int           | YES  |     |                 | Pattern number                      |
+| shot\_blasting      | varchar(10)   | YES  |     |                 | Shot blasting applied (Y/N)         |
+| punching            | varchar(10)   | YES  |     |                 | Punching applied (Y/N)              |
+| temperature         | int           | YES  |     |                 | Process temperature (°C)            |
+| time                | varchar(50)   | YES  |     |                 | Process time                        |
+| case\_depth         | varchar(50)   | YES  |     |                 | Case depth info                     |
+| checking\_location  | varchar(255)  | YES  |     |                 | Checking location                   |
+| cut\_off\_value     | varchar(50)   | YES  |     |                 | Cut off value                       |
+| core\_hardness      | varchar(50)   | YES  |     |                 | Core hardness                       |
+| surface\_hardness   | varchar(50)   | YES  |     |                 | Surface hardness                    |
+| microstructure      | varchar(255)  | YES  |     |                 | Microstructure details              |
+| furnace\_capacity   | varchar(50)   | YES  |     |                 | Furnace capacity                    |
+| batch\_qty          | int           | YES  |     |                 | Batch quantity                      |
+| total\_part\_weight | decimal(10,2) | YES  |     |                 | Total weight of parts               |
+| drg                 | varchar(50)   | YES  |     |                 | Drawing number                      |
+| broach\_spline      | varchar(10)   | YES  |     |                 | Broach/Spline info (Y/N)            |
+| anti\_carb\_paste   | varchar(10)   | YES  |     |                 | Anti-carb paste applied (Y/N)       |
+| hard\_temp          | int           | YES  |     |                 | Hardening temperature (°C)          |
+| rpm                 | int           | YES  |     |                 | Machine RPM                         |
 
----
 
 ## 🛠 SQL Queries to Create Tables
 
@@ -82,26 +91,39 @@ CREATE TABLE inward (
 );
 
 -- Table: part
+-- Table: part
 CREATE TABLE part (
     part_id INT AUTO_INCREMENT PRIMARY KEY,
-    part_name VARCHAR(255) NOT NULL,
+    customer_id INT,
+    part_name VARCHAR(255),
+    part_no VARCHAR(255),
     material VARCHAR(255),
-    drg VARCHAR(50),
+    weight DECIMAL(10,2),
+    process VARCHAR(255),
     loading VARCHAR(255),
-    broach_spline VARCHAR(10),
-    anti_carb_paste VARCHAR(10),
-    case_depth VARCHAR(50),
-    s_f_hardness VARCHAR(50),
-    wt_pc FLOAT,
-    total_weight FLOAT,
-    batch_qty INT,
-    patn_no VARCHAR(50),
-    hard_temp INT,
-    rpm INT,
+    pasting VARCHAR(10),
+    pattern_no INT,
     shot_blasting VARCHAR(10),
     punching VARCHAR(10),
-    part_no VARCHAR(255)
+    temperature INT,
+    time VARCHAR(50),
+    case_depth VARCHAR(50),
+    checking_location VARCHAR(255),
+    cut_off_value VARCHAR(50),
+    core_hardness VARCHAR(50),
+    surface_hardness VARCHAR(50),
+    microstructure VARCHAR(255),
+    furnace_capacity VARCHAR(50),
+    batch_qty INT,
+    total_part_weight DECIMAL(10,2),
+    drg VARCHAR(50),
+    broach_spline VARCHAR(10),
+    anti_carb_paste VARCHAR(10),
+    hard_temp INT,
+    rpm INT,
+    FOREIGN KEY (customer_id) REFERENCES customer(customer_id)
 );
+
 
 -- Table: inwardpart
 CREATE TABLE inwardpart (
@@ -140,7 +162,11 @@ INSERT INTO customer (customer_id, customer_name) VALUES
 (22, 'Shreya');
 
 -- Insert sample data into part table
-INSERT INTO part (part_id, part_name, material, drg, loading, broach_spline, anti_carb_paste, case_depth, s_f_hardness, wt_pc, total_weight, batch_qty, patn_no, hard_temp, rpm, shot_blasting, punching, part_no) VALUES
+INSERT INTO part (
+    part_id, part_name, material, drg, loading, broach_spline, anti_carb_paste,
+    case_depth, surface_hardness, weight, total_part_weight, batch_qty,
+    pattern_no, hard_temp, rpm, shot_blasting, punching, part_no
+) VALUES
 (1,'Gear','20MnCr5','Yes','star Bar','Yes','No','0.20-0.40@550Hv1 at RCD','89.5-91HR15N',0.918,293.76,320,'5',1400,1400,'Yes','NA','5484'),
 (2,'Gear','20MnCr5','Yes','star Bar','Yes','No','0.20-0.40@550Hv1 at RCD','89.5-91HR15N',0.97,310.4,320,'5',1400,1400,'Yes','NA','5485'),
 (3,'4WD input shaft','20MnCr5','Yes','Vertical','No','No','0.65 - 0.85@550Hv1 at SplineRCD','59-62Hrc',1.82,546,300,'4',1500,1500,'Yes','NA','0.018.7221.0/10'),
@@ -156,5 +182,5 @@ INSERT INTO part (part_id, part_name, material, drg, loading, broach_spline, ant
 (13,'PTO Shaft','20MnCr5','Yes','Flat','No','No','0.85 - 1.05 @ 550 Hv1','59-62 HRC',2.12,339.2,160,'10',1500,1500,'Yes','NA','0.022.2040.0/10'),
 (14,'Albero Transmettente 4RM Shaft','20MnCr5','Yes','Vertical','No','Yes','0.60 - 80@515 at Spline PCD','59-63 HRC',3.78,529.2,140,'4',1500,1500,'Yes','NA','V34001'),
 (15,'Albero Posteriore PTO Rear Shaft','20MnCr5','Yes','Vertical','No','Yes','0.60 - 80@515Hv1 Spline PCD','59-63 HRC',2.11,316.5,150,'11',1500,1500,'Yes','NA','V34002'),
-(16,'Routa Z28 Gear','20MnCr5','Yes','Vertical','No','No','0.65-0.85@550hV1 Spline root','60-63Hrc',2.37,545.1,230,'4',1500,1500,'Yes','NA','0.020.7433.0'),
--- … continue with remaining rows up to part_id 47 …
+(16,'Routa Z28 Gear','20MnCr5','Yes','Vertical','No','No','0.65-0.85@550hV1 Spline root','60-63Hrc',2.37,545.1,230,'4',1500,1500,'Yes','NA','0.020.7433.0');
+
