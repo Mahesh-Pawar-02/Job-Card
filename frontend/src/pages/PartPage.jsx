@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useReactToPrint } from "react-to-print";
+import Autocomplete from "../components/Autocomplete";
 
 export default function PartPage() {
   const [parts, setParts] = useState([]);
@@ -9,23 +10,37 @@ export default function PartPage() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [editPartId, setEditPartId] = useState(null);
   const [formData, setFormData] = useState({
+    customer_id: null,
+    customer_name: '',
+
     part_name: '',
-    part_no: '',         // ✅ added
+    part_no: '',
     material: '',
-    drg: '',
+    weight: null,
+    process: '',
     loading: '',
-    broach_spline: '',
-    anti_carb_paste: '',
-    case_depth: '',
-    s_f_hardness: '',
-    wt_pc: null,
-    total_weight: null,
-    batch_qty: null,
-    patn_no: '',
-    hard_temp: null,
-    rpm: null,
+    pasting: '',
+    pattern_no: '',
     shot_blasting: '',
     punching: '',
+    temperature: null,
+    time: '',
+    case_depth: '',
+    checking_location: '',
+    cut_off_value: '',
+    core_hardness: '',
+    surface_hardness: '',
+    microstructure: '',
+    furnace_capacity: '',
+    batch_qty: null,
+    total_part_weight: null,
+    drg: '',
+    broach_spline: '',
+    anti_carb_paste: '',
+    hard_temp: null,
+    rpm: null,
+    img_1: null,
+    img_2: null,
   });
 
   useEffect(() => {
@@ -65,12 +80,13 @@ export default function PartPage() {
       `Type "delete" to confirm deletion of parts with IDs: ${ids.join(", ")}`
     );
     if (confirmation !== "delete") {
-      return; // cancel
+      return;
     }
+
     fetch('http://localhost:5000/api/parts', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      body: JSON.stringify({ ids }),
     })
       .then((res) => res.json())
       .then(() => {
@@ -81,8 +97,12 @@ export default function PartPage() {
   }
 
   function handleChange(e) {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, files } = e.target;
+    if (type === "file") {
+      setFormData((prev) => ({ ...prev, [name]: files[0] }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   }
 
   async function startEdit(part) {
@@ -91,23 +111,9 @@ export default function PartPage() {
       const res = await fetch(`http://localhost:5000/api/parts/${part.part_id}`);
       const data = await res.json();
       setFormData({
-        part_name: data.part_name || '',
-        part_no: data.part_no || '',        // ✅ added
-        material: data.material || '',
-        drg: data.drg || '',
-        loading: data.loading || '',
-        broach_spline: data.broach_spline || '',
-        anti_carb_paste: data.anti_carb_paste || '',
-        case_depth: data.case_depth || '',
-        s_f_hardness: data.s_f_hardness || '',
-        wt_pc: data.wt_pc || null,
-        total_weight: data.total_weight || null,
-        batch_qty: data.batch_qty || null,
-        patn_no: data.patn_no || '',
-        hard_temp: data.hard_temp || null,
-        rpm: data.rpm || null,
-        shot_blasting: data.shot_blasting || '',
-        punching: data.punching || '',
+        ...data,
+        img_1: null, // reset files (files can’t be pre-filled)
+        img_2: null,
       });
     } catch (error) {
       alert('Failed to fetch part details');
@@ -117,51 +123,84 @@ export default function PartPage() {
   function cancelEdit() {
     setEditPartId(null);
     setFormData({
+      customer_id: null,
+      customer_name: '',
+
       part_name: '',
-      part_no: '',       // ✅ reset here
+      part_no: '',
       material: '',
-      drg: '',
+      weight: null,
+      process: '',
       loading: '',
-      broach_spline: '',
-      anti_carb_paste: '',
-      case_depth: '',
-      s_f_hardness: '',
-      wt_pc: null,
-      total_weight: null,
-      batch_qty: null,
-      patn_no: '',
-      hard_temp: null,
-      rpm: null,
+      pasting: '',
+      pattern_no: '',
       shot_blasting: '',
       punching: '',
+      temperature: null,
+      time: '',
+      case_depth: '',
+      checking_location: '',
+      cut_off_value: '',
+      core_hardness: '',
+      surface_hardness: '',
+      microstructure: '',
+      furnace_capacity: '',
+      batch_qty: null,
+      total_part_weight: null,
+      drg: '',
+      broach_spline: '',
+      anti_carb_paste: '',
+      hard_temp: null,
+      rpm: null,
+      img_1: null,
+      img_2: null,
     });
   }
 
   function saveEdit() {
+  if (!formData.part_name.trim()) return alert('Part name cannot be empty');
+
+  const form = new FormData();
+  Object.keys(formData).forEach((key) => {
+    if (formData[key] !== null && formData[key] !== "") {
+      if ((key === "img_1" || key === "img_2") && formData[key] instanceof File) {
+        form.append(key, formData[key]); // only send if new file chosen
+      } else if (key !== "img_1" && key !== "img_2") {
+        form.append(key, formData[key]);
+      }
+    }
+  });
+
+  fetch(`http://localhost:5000/api/parts/${editPartId}`, {
+    method: 'PUT',
+    body: form,
+  })
+    .then((res) => res.json())
+    .then(() => {
+      cancelEdit();
+      fetchParts();
+    })
+    .catch(console.error);
+}
+
+
+  function createPart() {
     if (!formData.part_name.trim()) return alert('Part name cannot be empty');
-    fetch(`http://localhost:5000/api/parts/${editPartId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
+
+    const form = new FormData();
+    Object.keys(formData).forEach((key) => {
+      if (formData[key] !== null) {
+        form.append(key, formData[key]);
+      }
+    });
+
+    fetch('http://localhost:5000/api/parts', {
+      method: 'POST',
+      body: form,
     })
       .then((res) => res.json())
       .then(() => {
         cancelEdit();
-        fetchParts();
-      })
-      .catch(console.error);
-  }
-
-  function createPart() {
-    if (!formData.part_name.trim()) return alert('Part name cannot be empty');
-    fetch('http://localhost:5000/api/parts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-    })
-      .then((res) => res.json())
-      .then(() => {
-        cancelEdit(); // ✅ reset form after create
         fetchParts();
       })
       .catch(console.error);
@@ -181,93 +220,55 @@ export default function PartPage() {
 
   return (
     <div style={{ margin: '4rem 1rem' }}>
-      {/* Create or Edit part form */}
+      {/* Form */}
       <div style={{ border: '1px solid gray', padding: '10px', marginBottom: '20px' }}>
         <h3>{editPartId ? 'Edit Part' : 'New Part'}</h3>
 
-        <label>
-          Part Name (required): <br />
-          <input name="part_name" value={formData.part_name} onChange={handleChange} required />
-        </label>
+        <Autocomplete
+          label="Customer"
+          fetchUrl="http://localhost:5000/api/customers/search"
+          value={
+            formData.customer_id
+              ? { id: formData.customer_id, name: formData.customer_name }
+              : null
+          }
+          onChange={(selected) => {
+            setFormData((prev) => ({
+              ...prev,
+              customer_id: selected ? selected.id : null,
+              customer_name: selected ? selected.name : "",
+            }));
+          }}
+        />
 
-        <label>
-          Part No: <br />        {/* ✅ new field */}
-          <input name="part_no" value={formData.part_no} onChange={handleChange} />
-        </label>
+        {/* Other fields */}
+        {Object.keys(formData)
+          .filter(k => !['customer_id','customer_name','img_1','img_2'].includes(k))
+          .map((field) => (
+          <label key={field}>
+            {field}: <br />
+            <input
+              name={field}
+              value={formData[field] ?? ''}
+              onChange={handleChange}
+              type={
+                ['weight','temperature','batch_qty','total_part_weight','hard_temp','rpm'].includes(field)
+                  ? 'number'
+                  : 'text'
+              }
+              step={['weight','total_part_weight'].includes(field) ? 'any' : undefined}
+            />
+          </label>
+        ))}
 
+        {/* File Uploads */}
         <label>
-          Material: <br />
-          <input name="material" value={formData.material} onChange={handleChange} />
+          img_1: <br />
+          <input type="file" name="img_1" onChange={handleChange} />
         </label>
-
         <label>
-          DRG: <br />
-          <input name="drg" value={formData.drg} onChange={handleChange} />
-        </label>
-
-        <label>
-          Loading: <br />
-          <input name="loading" value={formData.loading} onChange={handleChange} />
-        </label>
-
-        <label>
-          Broach/Spline: <br />
-          <input name="broach_spline" value={formData.broach_spline} onChange={handleChange} />
-        </label>
-
-        <label>
-          Anti Carb Paste: <br />
-          <input name="anti_carb_paste" value={formData.anti_carb_paste} onChange={handleChange} />
-        </label>
-
-        <label>
-          Case Depth: <br />
-          <input name="case_depth" value={formData.case_depth} onChange={handleChange} />
-        </label>
-
-        <label>
-          S/F Hardness: <br />
-          <input name="s_f_hardness" value={formData.s_f_hardness} onChange={handleChange} />
-        </label>
-
-        <label>
-          Weight per pc: <br />
-          <input name="wt_pc" value={formData.wt_pc ? formData.wt_pc : ''} onChange={handleChange} type="number" step="any" />
-        </label>
-
-        <label>
-          Total Weight: <br />
-          <input name="total_weight" value={formData.total_weight ? formData.total_weight : ''} onChange={handleChange} type="number" step="any" />
-        </label>
-
-        <label>
-          Batch Qty: <br />
-          <input name="batch_qty" value={formData.batch_qty ? formData.batch_qty : ''} onChange={handleChange} type="number" />
-        </label>
-
-        <label>
-          Patn No: <br />
-          <input name="patn_no" value={formData.patn_no} onChange={handleChange} />
-        </label>
-
-        <label>
-          Hard Temp: <br />
-          <input name="hard_temp" value={formData.hard_temp ? formData.hard_temp : ''} onChange={handleChange} type="number" />
-        </label>
-
-        <label>
-          RPM: <br />
-          <input name="rpm" value={formData.rpm ? formData.rpm : ''} onChange={handleChange} type="number" />
-        </label>
-
-        <label>
-          Shot Blasting: <br />
-          <input name="shot_blasting" value={formData.shot_blasting} onChange={handleChange} />
-        </label>
-
-        <label>
-          Punching: <br />
-          <input name="punching" value={formData.punching} onChange={handleChange} />
+          img_2: <br />
+          <input type="file" name="img_2" onChange={handleChange} />
         </label>
 
         <br />
@@ -282,14 +283,12 @@ export default function PartPage() {
         )}
       </div>
 
-
+      {/* List + details */}
       <div style={{ display: 'flex', margin: '1rem' }}>
         <div style={{ flex: 1, marginRight: '20px' }}>
-          {/* Delete selected */}
           <button onClick={deleteSelected} disabled={selectedIds.size === 0}>
             Delete Selected
           </button>
-          {/* list of part */}
           <table border="1" cellPadding="4" style={{ marginTop: '1rem' }}>
             <thead>
               <tr>
@@ -322,7 +321,6 @@ export default function PartPage() {
           </table>
         </div>
 
-        {/* Right side - part details */}
         <div style={{ flex: 1, border: '1px solid gray', padding: '10px' }}>
           {selectedPart ? (
             <>
@@ -332,11 +330,8 @@ export default function PartPage() {
                 <button onClick={handlePrint}>Print</button>{' '}
                 <button
                   onClick={() => {
-                    // confirmation
                     const confirmation = window.prompt(`Type "delete" to confirm deletion of part with ID: ${selectedPart.part_id}`);
-                    if (confirmation !== "delete") {
-                      return; // cancel
-                    }
+                    if (confirmation !== "delete") return;
                     fetch('http://localhost:5000/api/parts', {
                       method: 'DELETE',
                       headers: { 'Content-Type': 'application/json' },
@@ -353,23 +348,17 @@ export default function PartPage() {
                 </button>
               </div>
               <div ref={detailsRef}>
-                <p><b>Part Name:</b> {selectedPart.part_name}</p>
-                <p><b>Part No:</b> {selectedPart.part_no || 'N/A'}</p>
-                <p><b>Material:</b> {selectedPart.material || 'N/A'}</p>
-                <p><b>DRG:</b> {selectedPart.drg || 'N/A'}</p>
-                <p><b>Loading:</b> {selectedPart.loading || 'N/A'}</p>
-                <p><b>Broach/Spline:</b> {selectedPart.broach_spline || 'N/A'}</p>
-                <p><b>Anti Carb Paste:</b> {selectedPart.anti_carb_paste || 'N/A'}</p>
-                <p><b>Case Depth:</b> {selectedPart.case_depth || 'N/A'}</p>
-                <p><b>S/F Hardness:</b> {selectedPart.s_f_hardness || 'N/A'}</p>
-                <p><b>Weight per pc:</b> {selectedPart.wt_pc || 'N/A'}</p>
-                <p><b>Total Weight:</b> {selectedPart.total_weight || 'N/A'}</p>
-                <p><b>Batch Qty:</b> {selectedPart.batch_qty || 'N/A'}</p>
-                <p><b>Patn No:</b> {selectedPart.patn_no || 'N/A'}</p>
-                <p><b>Hard Temp:</b> {selectedPart.hard_temp || 'N/A'}</p>
-                <p><b>RPM:</b> {selectedPart.rpm || 'N/A'}</p>
-                <p><b>Shot Blasting:</b> {selectedPart.shot_blasting || 'N/A'}</p>
-                <p><b>Punching:</b> {selectedPart.punching || 'N/A'}</p>
+                <p><b>Customer:</b> {selectedPart.customer_name || 'N/A'}</p>
+                {Object.entries(selectedPart).map(([k,v]) =>
+                  !['part_id','customer_id','customer_name'].includes(k) ? (
+                    <p key={k}>
+                      <b>{k}:</b>{" "}
+                      {k.startsWith("img_") && v
+                        ? <img src={`http://localhost:5000/${v}`} alt={k} width="100" />
+                        : v || 'N/A'}
+                    </p>
+                  ) : null
+                )}
               </div>
             </>
           ) : (
