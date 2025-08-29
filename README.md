@@ -15,47 +15,53 @@ File Uploads: Multer (stored in /uploads/parts)
 
 PDF/Print Export: html2pdf.js
 
-📑 Database Schema
 customer
-Field	Type	Key	Notes
-customer_id	int (PK)	AI	Unique identifier
-customer_name	varchar(255)		Required
+| Field          | Type         | Key | Notes             |
+| -------------- | ------------ | --- | ----------------- |
+| customer\_id   | int (PK)     | AI  | Unique identifier |
+| customer\_name | varchar(255) |     | Required          |
+
 process
-Field	Type	Notes
-process_id	int (PK)	Auto increment
-process_name	varchar(255)	Required
-loading	varchar(255)	
-pasting	varchar(10)	Yes / No
-pattern_no	int	
-shot_blasting	varchar(10)	Yes / No
-punching	varchar(10)	Yes / No
-temperature	int	Tempering temperature
-time	varchar(50)	Tempering time
-case_depth	varchar(50)	Inspection
-checking_location	varchar(255)	Inspection
-cut_off_value	varchar(50)	Inspection
-core_hardness	varchar(50)	Inspection
-surface_hardness	varchar(50)	Inspection
-microstructure	varchar(255)	Inspection
+| Field              | Type         | Notes                 |
+| ------------------ | ------------ | --------------------- |
+| process\_id        | int (PK)     | Auto increment        |
+| process\_name      | varchar(255) | Required              |
+| loading            | varchar(255) |                       |
+| pasting            | varchar(10)  | Yes / No              |
+| pattern\_no        | int          |                       |
+| shot\_blasting     | varchar(10)  | Yes / No              |
+| punching           | varchar(10)  | Yes / No              |
+| temperature        | int          | Tempering temperature |
+| time               | varchar(50)  | Tempering time        |
+| case\_depth        | varchar(50)  | Inspection            |
+| checking\_location | varchar(255) | Inspection            |
+| cut\_off\_value    | varchar(50)  | Inspection            |
+| core\_hardness     | varchar(50)  | Inspection            |
+| surface\_hardness  | varchar(50)  | Inspection            |
+| microstructure     | varchar(255) | Inspection            |
+
 part
-Field	Type	Notes
-part_id	int (PK)	Auto increment
-customer_id	int (FK)	References customer.customer_id
-process_id	int (FK)	References process.process_id
-part_name	varchar(255)	Required
-part_no	varchar(255)	
-material	varchar(255)	
-weight	decimal(10,2)	
-furnace_capacity	varchar(50)	Charge preparation
-batch_qty	int	
-total_part_weight	decimal(10,2)	
-drg	varchar(50)	Drawing available?
-broach_spline	varchar(10)	Yes / No
-anti_carb_paste	varchar(10)	Yes / No
-hard_temp	int	Hardening temperature
-rpm	int	
-image1	varchar(255)	First image path (stored in /uploads/parts)
-image2	varchar(255)	Second image path (stored in /uploads/parts)
+| Field               | Type          | Notes                                          |
+| ------------------- | ------------- | ---------------------------------------------- |
+| part\_id            | int (PK)      | Auto increment                                 |
+| customer\_id        | int (FK)      | References `customer.customer_id`              |
+| process\_id         | int (FK)      | References `process.process_id`                |
+| part\_name          | varchar(255)  | Required                                       |
+| part\_no            | varchar(255)  |                                                |
+| material            | varchar(255)  |                                                |
+| weight              | decimal(10,2) |                                                |
+| furnace\_capacity   | varchar(50)   | Charge preparation                             |
+| batch\_qty          | int           |                                                |
+| total\_part\_weight | decimal(10,2) |                                                |
+| drg                 | varchar(50)   | Drawing available?                             |
+| broach\_spline      | varchar(10)   | Yes / No                                       |
+| anti\_carb\_paste   | varchar(10)   | Yes / No                                       |
+| hard\_temp          | int           | Hardening temperature                          |
+| rpm                 | int           |                                                |
+| image1              | varchar(255)  | First image path (stored in `/uploads/parts`)  |
+| image2              | varchar(255)  | Second image path (stored in `/uploads/parts`) |
+
+
 🚀 Features
 
 CRUD Operations for Customer, Process, and Part.
