@@ -1,44 +1,46 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const { testConnection } = require('./config/database.js');
+require("dotenv").config();
+const express = require("express");
+const path = require("path");
+const cors = require("cors");
+const bodyParser = require("body-parser");
 
-const path = require('path');
-const fs = require('fs');
+const { testConnection } = require("./config/database");
 
-// make sure folders exist
-const UPLOAD_DIR = path.join(__dirname, 'uploads');
-const PARTS_DIR  = path.join(UPLOAD_DIR, 'parts');
-fs.mkdirSync(PARTS_DIR, { recursive: true });
-
-// Import Routes
-const inwardRoutes = require('./routes/inwardRoutes');
-const customerRoutes = require('./routes/customerRoutes');
-const partRoutes = require('./routes/partRoutes');
+const partRoutes = require("./routes/partRoutes");
+const customerRoutes = require("./routes/customerRoutes");
+const processRoutes = require("./routes/processRoutes");
 
 const app = express();
-app.use(bodyParser.json());
 
-// serve files statically at /uploads/*
-app.use('/uploads', require('express').static(UPLOAD_DIR));
+// ✅ Enable CORS (for all origins during dev; you can restrict later)
+app.use(cors());
 
-// ✅ Enable CORS (allow frontend to call backend)
-app.use(cors({
-  origin: 'http://localhost:5173',  // your vite dev server
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type']
-}));
+// ✅ Middleware
+app.use(bodyParser.json()); // parse JSON request bodies
 
-// Routes
-app.use('/api/inwards', inwardRoutes);
-app.use('/api/customers', customerRoutes); // 🔹 added
-app.use('/api/parts', partRoutes);         // 🔹 added
+// ✅ Serve uploaded files statically
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-// Test DB connection
-testConnection();
+// ✅ Routes
+app.use("/api/parts", partRoutes);
+app.use("/api/customers", customerRoutes);
+app.use("/api/processes", processRoutes);
 
-// Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+// ✅ Health check route
+app.get("/", (req, res) => {
+  res.send("Backend API is running 🚀");
 });
+
+// ✅ Start server after testing DB connection
+const PORT = process.env.PORT || 5000;
+(async () => {
+  const isConnected = await testConnection();
+  if (isConnected) {
+    app.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+    });
+  } else {
+    console.error("❌ Server not started because database connection failed!");
+    process.exit(1); // exit app if db is not connected
+  }
+})();

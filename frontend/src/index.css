@@ -1,3 +1,4 @@
+@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Ancizar+Sans:ital,wght@0,100..1000;1,100..1000&display=swap');
 
 * {
@@ -5,6 +6,7 @@
 }
 
 html, body {
+  margin-top: 50px;
   font-size: 18.5px;
   line-height: 1.55;
   color: #212529;

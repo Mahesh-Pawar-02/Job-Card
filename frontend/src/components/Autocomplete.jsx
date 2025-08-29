@@ -1,70 +1,92 @@
 import React, { useState, useEffect, useRef } from "react";
 
 export default function Autocomplete({ label, fetchUrl, value, onChange }) {
-    const [input, setInput] = useState(value?.name || "");
-    const [suggestions, setSuggestions] = useState([]);
-    const suppressFetch = useRef(false); // 👈 flag to skip fetch
+  const [input, setInput] = useState(value?.name || "");
+  const [suggestions, setSuggestions] = useState([]);
+  const suppressFetch = useRef(false);
 
-    useEffect(() => {
-        if (value) {
-            suppressFetch.current = true; // 👈 next input update should not trigger fetch
-            setInput(value.name);
-            setSuggestions([]); // clear suggestions when prefilling
-        } else {
-            setInput(""); // ✅ clear when null
-        }
-    }, [value?.id]);
+  useEffect(() => {
+    if (value) {
+      suppressFetch.current = true;
+      setInput(value.name);
+      setSuggestions([]);
+    } else {
+      setInput("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value?.id]);
 
-    useEffect(() => {
-        if (suppressFetch.current) {
-            suppressFetch.current = false; // reset after skipping once
+  useEffect(() => {
+    if (suppressFetch.current) {
+      suppressFetch.current = false;
+      return;
+    }
+
+    const run = async () => {
+      if (input.length > 1) {
+        // try both ?search and ?q (support both backends)
+        const tryUrls = [
+          `${fetchUrl}?search=${encodeURIComponent(input)}`,
+          `${fetchUrl}?q=${encodeURIComponent(input)}`,
+        ];
+        for (const url of tryUrls) {
+          try {
+            const res = await fetch(url);
+            if (!res.ok) continue;
+            const data = await res.json();
+            setSuggestions(Array.isArray(data) ? data : []);
             return;
+          } catch {}
         }
+      } else {
+        setSuggestions([]);
+      }
+    };
+    run();
+  }, [input, fetchUrl]);
 
-        if (input.length > 1) {
-            const fetchData = async () => {
-                const res = await fetch(`${fetchUrl}?search=${input}`);
-                const data = await res.json();
-                setSuggestions(data);
-            };
-            fetchData();
-        } else {
-            setSuggestions([]);
-        }
-    }, [input, fetchUrl]);
+  const pickId = (item) =>
+    item.customer_id ?? item.process_id ?? item.part_id ?? item.id;
 
-    return (
-        <div>
-            <label>{label ? label : ""}</label>
-            <input
-                type="text"
-                value={input}
-                onChange={(e) => {
-                    setInput(e.target.value);
-                    onChange(null); // reset until selected
+  const pickName = (item) =>
+    item.customer_name ?? item.process_name ?? item.part_name ?? item.name;
+
+  return (
+    <div>
+      {label ? <label className="block text-sm mb-1">{label}</label> : null}
+      <input
+        type="text"
+        value={input}
+        onChange={(e) => {
+          setInput(e.target.value);
+          onChange(null); // reset until user selects
+        }}
+        className="border p-2 w-full"
+        placeholder={`Search ${label?.toLowerCase() || ""}`}
+      />
+
+      {suggestions.length > 0 && (
+        <ul className="border mt-0 max-h-56 overflow-auto bg-white z-10 relative">
+          {suggestions.map((item) => {
+            const id = pickId(item);
+            const name = pickName(item);
+            return (
+              <li
+                key={id}
+                className="px-2 py-1 cursor-pointer hover:bg-gray-100"
+                onClick={() => {
+                  suppressFetch.current = true;
+                  setInput(name);
+                  onChange({ id, name });
+                  setSuggestions([]);
                 }}
-            />
-            {suggestions.length > 0 && (
-                <ul style={{ border: "1px solid #ccc", marginTop: "0" }}>
-                    {suggestions.map((item) => (
-                        <li
-                            key={item.customer_id || item.part_id}
-                            style={{ cursor: "pointer" }}
-                            onClick={() => {
-                                suppressFetch.current = true; // 👈 don’t fetch right after selection
-                                setInput(item.customer_name || item.part_name);
-                                onChange({
-                                    id: item.customer_id || item.part_id,
-                                    name: item.customer_name || item.part_name,
-                                });
-                                setSuggestions([]); // hide dropdown after selecting
-                            }}
-                        >
-                            {item.customer_name || item.part_name}
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </div>
-    );
+              >
+                {name}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
 }
