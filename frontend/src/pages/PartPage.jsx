@@ -1,54 +1,53 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-// If your Autocomplete is in components/Autocomplete.jsx, update the import:
 import Autocomplete from "../components/Autocomplete";
-import html2pdf from "html2pdf.js";
+import { toast } from "react-toastify";
 
 const API = "http://localhost:5000/api";
 
-// fields from your part table (exactly as you showed)
-const PART_FIELDS = [
-  "part_name",
-  "part_no",
-  "material",
-  "weight",
-  "furnace_capacity",
-  "batch_qty",
-  "total_part_weight",
-  "drg",
-  "broach_spline",
-  "anti_carb_paste",
-  "hard_temp",
-  "rpm",
+const PART_SPEC = [
+  { key: "name", label: "Part Name", type: "text" },
+  { key: "no", label: "Part No", type: "text" },
+  { key: "material", label: "Material", type: "text" },
+  { key: "weight", label: "Weight", type: "decimal" },
+  { key: "furnace_capacity", label: "Furnace Capacity", type: "text" },
+  { key: "batch_qty", label: "Batch Quantity", type: "int" },
+  { key: "total_part_weight", label: "Total Part Weight", type: "decimal" },
+  { key: "drg", label: "DRG", type: "select", options: ["Yes", "No", "N/A"] },
+  { key: "broach_spline", label: "Broach Spline", type: "text" },
+  { key: "anti_carb_paste", label: "Anti Carb Paste", type: "text" },
+  { key: "hard_temp", label: "Hard Temp (°C)", type: "int" },
+  { key: "rpm", label: "RPM", type: "int" },
+
+  // process related
+  { key: "loading_pattern", label: "Loading Pattern", type: "text" },
+  { key: "pasting", label: "Pasting", type: "text" },
+  { key: "pattern_no", label: "Pattern No", type: "int" },
+  { key: "shot_blasting", label: "Shot Blasting", type: "text" },
+  { key: "punching", label: "Punching", type: "text" },
+  { key: "tempering_temp", label: "Tempering Temp", type: "int" },
+  { key: "soaking_time", label: "Soaking Time", type: "text" },
+
+  // inspection
+  { key: "case_depth", label: "Case Depth", type: "text" },
+  { key: "checking_location", label: "Checking Location", type: "text" },
+  { key: "cut_off_value", label: "Cut Off Value", type: "text" },
+  { key: "core_hardness", label: "Core Hardness", type: "text" },
+  { key: "surface_hardness", label: "Surface Hardness", type: "text" },
+
+  // microstructure handled separately
 ];
 
-// (used to render right-side details)
-const PROCESS_FIELDS = [
-  "process_name",
-  "loading",
-  "pasting",
-  "pattern_no",
-  "shot_blasting",
-  "punching",
-  "temperature",
-  "time",
-  "case_depth",
-  "checking_location",
-  "cut_off_value",
-  "core_hardness",
-  "surface_hardness",
-  "microstructure",
-];
 
 export default function PartPage() {
   const printRef = useRef();
+
   const [parts, setParts] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [viewPart, setViewPart] = useState(null);
+  const [editform, setEditForm] = useState(null)
 
   // modals & dialogs
   const [showForm, setShowForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
 
   const [deleteInput, setDeleteInput] = useState("");
 
@@ -57,34 +56,16 @@ export default function PartPage() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // Derived: filtered + paginated parts
-  const filteredParts = useMemo(() => {
-    return parts.filter(p => {
-      const term = searchTerm.toLowerCase();
-      return (
-        p.part_name.toLowerCase().includes(term) ||
-        p.part_no.toLowerCase().includes(term) ||
-        p.customer_name.toLowerCase().includes(term)
-      );
-    });
-  }, [parts, searchTerm]);
-
-  const paginatedParts = useMemo(() => {
-    const start = (page - 1) * rowsPerPage;
-    return filteredParts.slice(start, start + rowsPerPage);
-  }, [filteredParts, page, rowsPerPage]);
-
-  const totalPages = Math.ceil(filteredParts.length / rowsPerPage);
-
   // form state
   const [formData, setFormData] = useState({
     customer_id: "",
     process_id: "",
-    part_name: "",
-    part_no: "",
+    // core part fields
+    name: "",
+    no: "",
     material: "",
     weight: null,
-    furnace_capacity: "",
+    furnace_capacity: "600kg",
     batch_qty: null,
     total_part_weight: null,
     drg: "",
@@ -92,8 +73,26 @@ export default function PartPage() {
     anti_carb_paste: "",
     hard_temp: null,
     rpm: null,
-    image1: null, // 👈 add
-    image2: null, // 👈 add
+    // process details
+    loading_pattern: "",
+    pasting: "",
+    pattern_no: null,
+    shot_blasting: "",
+    punching: "",
+    tempering_temp: null,
+    soaking_time: "",
+    // inspection
+    case_depth: "",
+    checking_location: "",
+    cut_off_value: "",
+    core_hardness: "",
+    surface_hardness: "",
+    // microstructure as two fields for UX
+    microstructure: [{ key: "", value: "" }],
+    // files
+    part_image: null,
+    charge_image: null,
+    drawing: null,
   });
 
   // for showing the chosen names in the Autocomplete inputs
@@ -105,41 +104,28 @@ export default function PartPage() {
   const [processPreview, setProcessPreview] = useState(null);
 
 
+  // Derived: filtered + paginated parts
+  const filteredParts = useMemo(() => {
+    return ((parts != null || parts != undefined) && parts.length > 0) && parts.filter(p => {
+      const term = searchTerm.toLowerCase();
+      return (
+        p?.part_name?.toLowerCase().includes(term) ||
+        p?.part_no?.toLowerCase().includes(term) ||
+        p?.customer_name?.toLowerCase().includes(term)
+      );
+    });
+  }, [parts, searchTerm]);
+
+  const paginatedParts = useMemo(() => {
+    const start = (page - 1) * rowsPerPage;
+    return ((parts != null || parts != undefined) && parts.length > 0) && filteredParts.slice(start, start + rowsPerPage);
+  }, [filteredParts, page, rowsPerPage]);
+
+  const totalPages = Math.ceil(filteredParts.length / rowsPerPage);
+
   useEffect(() => {
     fetchParts();
   }, []);
-
-  const handleDownloadPdf = () => {
-    if (printRef.current) {
-      const clone = printRef.current.cloneNode(true);
-
-      // Inject safe CSS for html2pdf
-      const style = document.createElement("style");
-      style.textContent = `
-      * {
-        color: #000 !important;
-      }
-      .bg-blue-600 { background-color: #2563eb !important; color: white !important; }
-      .bg-red-600 { background-color: #dc2626 !important; color: white !important; }
-      .bg-green-600 { background-color: #16a34a !important; color: white !important; }
-      .bg-yellow-500 { background-color: #eab308 !important; color: white !important; }
-      .bg-gray-500 { background-color: #6b7280 !important; color: white !important; }
-      .border { border: 1px solid #000 !important; }
-    `;
-      clone.appendChild(style);
-
-      const opt = {
-        margin: 0.5,
-        filename: `part_${viewPart.part_no || "details"}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: "in", format: "a4", orientation: "portrait" }
-      };
-
-      html2pdf().set(opt).from(clone).save();
-    }
-  };
-
 
   const fetchParts = async () => {
     try {
@@ -152,15 +138,34 @@ export default function PartPage() {
     }
   };
 
-  const openView = async (part) => {
-    try {
-      const res = await fetch(`${API}/parts/${part.part_id}`);
-      const data = await res.json();
-      setViewPart(data);
-      setShowViewModal(true);   // 👈 open modal
-    } catch (e) {
-      console.error("Failed to fetch part details", e);
-    }
+  // add an empty microstructure row at the end
+  const addMicrostructureRow = () => {
+    setFormData((f) => ({
+      ...f,
+      microstructure: Array.isArray(f.microstructure)
+        ? [...f.microstructure, { key: "", value: "" }]
+        : [{ key: "", value: "" }],
+    }));
+  };
+
+  // remove row by index
+  const removeMicrostructureRow = (index) => {
+    setFormData((f) => {
+      const arr = Array.isArray(f.microstructure) ? [...f.microstructure] : [];
+      if (index >= 0 && index < arr.length) arr.splice(index, 1);
+      // ensure at least one empty row if you prefer:
+      return { ...f, microstructure: arr.length ? arr : [{ key: "", value: "" }] };
+    });
+  };
+
+  // update one field of a microstructure row
+  const updateMicrostructureRow = (index, field, value) => {
+    setFormData((f) => {
+      const arr = Array.isArray(f.microstructure) ? [...f.microstructure] : [{ key: "", value: "" }];
+      if (!arr[index]) arr[index] = { key: "", value: "" };
+      arr[index] = { ...arr[index], [field]: value };
+      return { ...f, microstructure: arr };
+    });
   };
 
 
@@ -169,91 +174,157 @@ export default function PartPage() {
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
+  useEffect(() => {
+    console.log("Selected IDs:", selectedIds);
+  }, [selectedIds]);
 
   const handleSave = async () => {
+    console.log(selectedCustomer, selectedProcess);
     try {
-      if (!formData.customer_id || !formData.process_id) {
-        alert("Please select a Customer and a Process from suggestions.");
+      // require selections (same as you had)
+      if (!selectedCustomer?.id || !selectedProcess?.id) {
+        alert("Select customer & process from suggestions");
         return;
       }
 
-      // Normalize numeric fields (convert "" → null)
-      const numericFields = ["weight", "batch_qty", "total_part_weight", "hard_temp", "rpm"];
-      const cleanData = { ...formData };
-      numericFields.forEach((f) => {
-        if (cleanData[f] === "" || cleanData[f] === undefined) {
-          cleanData[f] = null;
+      // Build base payload from form state but ensure customer/process IDs come from selectors
+      const payloadBase = {
+        ...formData,
+        customer_id: selectedCustomer.id,
+        process_id: selectedProcess.id,
+      };
+
+      // Numeric normalization (convert "" or non-number -> null)
+      const numericKeys = [
+        "weight",
+        "batch_qty",
+        "total_part_weight",
+        "hard_temp",
+        "rpm",
+        "pattern_no",
+        "tempering_temp",
+      ];
+      numericKeys.forEach((k) => {
+        const v = payloadBase[k];
+        if (v === "" || v === undefined || v === null) payloadBase[k] = null;
+        else {
+          const n = Number(v);
+          payloadBase[k] = Number.isFinite(n) ? n : null;
         }
       });
 
-      // Use FormData for text + files
-      const fd = new FormData();
-      Object.entries(cleanData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined && key !== "image1" && key !== "image2") {
-          fd.append(key, value);
-        }
-      });
-
-      // append only if new file selected
-      if (formData.image1 instanceof File) {
-        fd.append("image1", formData.image1);
+      // microstructure: convert array [{key,value}, ...] => object { key: value, ... }
+      // Filter out rows with empty keys (trimmed)
+      let microToSend = "";
+      const msArr = Array.isArray(payloadBase.microstructure) ? payloadBase.microstructure : [];
+      const msObj = {};
+      for (const row of msArr) {
+        if (!row) continue;
+        const k = String(row.key ?? "").trim();
+        // allow empty values, but require key
+        if (k.length === 0) continue;
+        // store value as-is (trimmed)
+        msObj[k] = row.value === undefined ? "" : row.value;
       }
-      if (formData.image2 instanceof File) {
-        fd.append("image2", formData.image2);
-      }
-
-
-      for (let [key, val] of fd.entries()) {
-        console.log(key, val);
-      }
-
-      if (viewPart) {
-        await fetch(`${API}/parts/${viewPart.part_id}`, {
-          method: "PUT",
-          body: fd, // no headers -> browser sets multipart
-        });
+      if (Object.keys(msObj).length > 0) {
+        microToSend = JSON.stringify(msObj);
       } else {
-        await fetch(`${API}/parts`, {
-          method: "POST",
-          body: fd,
-        });
+        // empty -> send empty string so backend normalizeJSON("") => null
+        // This is intentional: sending "" clears microstructure in DB.
+        microToSend = "";
       }
 
+      // Build FormData
+      const fd = new FormData();
+
+      // Append all fields except files and the original microstructure array
+      // We'll always append a microstructure field (microToSend) to avoid accidentally wiping/preserving wrongly.
+      Object.entries(payloadBase).forEach(([k, v]) => {
+        if (["part_image", "charge_image", "drawing", "microstructure"].includes(k)) return;
+        // only append values that are not undefined (null is fine; backend does `x || null`)
+        if (v !== undefined) {
+          // For null -> we append empty string? no — append null would become "null" string; better to append empty string
+          // but backend uses (value || null) so sending "" becomes null server-side. So we append empty string for null.
+          if (v === null) return;
+          else fd.append(k, String(v));
+        }
+      });
+
+      // Always append microstructure field (string or empty string)
+      // Backend normalizeJSON will convert "" to null, and a JSON string will be parsed by normalizeJSON.
+      fd.append("microstructure", microToSend);
+
+      // Files: append only if the field contains a File (new upload)
+      if (formData.part_image instanceof File) fd.append("part_image", formData.part_image);
+      if (formData.charge_image instanceof File) fd.append("charge_image", formData.charge_image);
+      if (formData.drawing instanceof File) fd.append("drawing", formData.drawing);
+
+      // Decide endpoint & method
+      const url = editform ? `${API}/parts/${editform.id}` : `${API}/parts`;
+      const method = editform ? "PUT" : "POST";
+
+      console.log("Saving part to", url, "method", method, "with data", Object.fromEntries(fd));
+
+      const res = await fetch(url, { method, body: fd });
+      let result;
+      try {
+        result = await res.json();
+      } catch {
+        result = null;
+      }
+
+      if (!res.ok) {
+        throw new Error(result?.error || `Server returned ${res.status}`);
+      }
+      toast.success(editform ? "Part updated successfully!" : "Part created successfully!");
+
+      // success: close modal, reset, reload parts
       setShowForm(false);
-      resetForm();
+      resetForm(); // your existing resetForm should reset microstructure to [{key:"",value:""}]
       fetchParts();
     } catch (e) {
-      console.error("Failed to save part", e);
+      console.error("Save failed", e);
+      toast.error(e.message || "Save failed. Please try again.");
     }
   };
 
 
   const deleteSelected = async () => {
     try {
-      await fetch(`${API}/parts/`, {
+      const res = await fetch(`${API}/parts/`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedIds }),
       });
+
+      const result = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(result?.error || "Failed to delete parts.");
+      }
+
+      toast.success(`Deleted ${selectedIds.length} part(s) successfully`);
       setSelectedIds([]);
-      setViewPart(null);
       setShowDeleteConfirm(false);
       setDeleteInput("");
       fetchParts();
     } catch (e) {
-      console.error("Failed to delete parts", e);
+      console.error("Delete failed", e);
+      toast.error(e.message || "Failed to delete parts.");
     }
   };
+
 
   const resetForm = () => {
     setFormData({
       customer_id: "",
       process_id: "",
-      part_name: "",
-      part_no: "",
+      // core part fields
+      name: "",
+      no: "",
       material: "",
       weight: null,
-      furnace_capacity: "",
+      furnace_capacity: "600kg",
       batch_qty: null,
       total_part_weight: null,
       drg: "",
@@ -261,48 +332,91 @@ export default function PartPage() {
       anti_carb_paste: "",
       hard_temp: null,
       rpm: null,
+      // process details
+      loading_pattern: "",
+      pasting: "",
+      pattern_no: null,
+      shot_blasting: "",
+      punching: "",
+      tempering_temp: null,
+      soaking_time: "",
+      // inspection
+      case_depth: "",
+      checking_location: "",
+      cut_off_value: "",
+      core_hardness: "",
+      surface_hardness: "",
+      // microstructure as two fields for UX
+      microstructure: [{ key: "", value: "" }],
+      // files
+      part_image: null,
+      charge_image: null,
+      drawing: null,
     });
     setSelectedCustomer(null);
     setSelectedProcess(null);
-    setViewPart(null);
   };
 
   // when editing, preload names in the Autocomplete
-  const startEditFromView = () => {
-    if (!viewPart) return;
-    setFormData((prev) => {
-      const next = { ...prev };
-      PART_FIELDS.forEach((f) => (next[f] = viewPart[f] ?? ""));
-      next.customer_id = viewPart.customer_id || "";
-      next.process_id = viewPart.process_id || "";
-      next.image1 = null; // don’t preload DB filename into formData
-      next.image2 = null; // user must re-select if replacing
+  const startEditFromView = (p) => {
+    setFormData({
+      id: p.id,
+      customer_id: p.customer_id || "",
+      process_id: p.process_id || "",
+      name: p.name || "",
+      no: p.no || "",
+      material: p.material || "",
+      weight: p.weight ?? "",
+      furnace_capacity: p.furnace_capacity ?? "600kg",
+      batch_qty: p.batch_qty ?? "",
+      total_part_weight: p.total_part_weight ?? "",
+      drg: p.drg ?? "",
+      broach_spline: p.broach_spline ?? "",
+      anti_carb_paste: p.anti_carb_paste ?? "",
+      hard_temp: p.hard_temp ?? "",
+      rpm: p.rpm ?? "",
+      loading_pattern: p.loading_pattern ?? "",
+      pasting: p.pasting ?? "",
+      pattern_no: p.pattern_no ?? "",
+      shot_blasting: p.shot_blasting ?? "",
+      punching: p.punching ?? "",
+      tempering_temp: p.tempering_temp ?? "",
+      soaking_time: p.soaking_time ?? "",
+      case_depth: p.case_depth ?? "",
+      checking_location: p.checking_location ?? "",
+      cut_off_value: p.cut_off_value ?? "",
+      core_hardness: p.core_hardness ?? "",
+      surface_hardness: p.surface_hardness ?? "",
+      microstructure: (() => {
+        try {
+          const parsed = JSON.parse(p.microstructure || "[]");
+          if (Array.isArray(parsed)) return parsed;
+          // fallback if backend still sends {case:.., core:..}
+          if (typeof parsed === "object") {
+            return Object.entries(parsed).map(([key, value]) => ({ key, value }));
+          }
+          return [{ key: "", value: "" }];
+        } catch {
+          return [{ key: "", value: "" }];
+        }
+      })(),
 
-      return next;
+      // DO NOT preload file names into file inputs
+      part_image: null,
+      charge_image: null,
+      drawing: null,
+      customer_name: p.customer_name || "",
+      process_name: p.process_name || "",
     });
-    setSelectedCustomer(
-      viewPart.customer_id
-        ? { id: viewPart.customer_id, name: viewPart.customer_name }
-        : null
-    );
-    setSelectedProcess(
-      viewPart.process_id
-        ? { id: viewPart.process_id, name: viewPart.process_name }
-        : null
-    );
-    setShowViewModal(false)
+
+    setSelectedCustomer({ id: p.customer_id, name: p.customer_name });
+    setSelectedProcess({ id: p.process_id, name: p.process_name });
+
+    console.log("p:", p);
+
+    setEditForm(p)
     setShowForm(true);
   };
-
-  const partDetails = useMemo(() => {
-    if (!viewPart) return [];
-    return PART_FIELDS.map((k) => [k, viewPart[k]]);
-  }, [viewPart]);
-
-  const processDetails = useMemo(() => {
-    if (!viewPart) return [];
-    return PROCESS_FIELDS.map((k) => [k, viewPart[k]]);
-  }, [viewPart]);
 
   const showCustomerPreview = async () => {
     if (!selectedCustomer?.id) return;
@@ -321,8 +435,8 @@ export default function PartPage() {
   return (
     <div className="flex">
 
-      {/* LEFT: list */}
-      <div className="w-2/3 p-4">
+      {/* list */}
+      <div className="p-4 w-full">
         <span>
           Page {page} of {totalPages} &nbsp;|&nbsp;
           Showing {paginatedParts.length} of {filteredParts.length} results
@@ -376,53 +490,150 @@ export default function PartPage() {
         </div>
 
 
-        <table className="w-full border">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="p-2">
-                <input
-                  type="checkbox"
-                  checked={paginatedParts.length > 0 && paginatedParts.every(p => selectedIds.includes(p.part_id))}
-                  onChange={(e) =>
-                    setSelectedIds(e.target.checked
-                      ? [...new Set([...selectedIds, ...paginatedParts.map((p) => p.part_id)])]
-                      : selectedIds.filter(id => !paginatedParts.some(p => p.part_id === id))
-                    )
-                  }
-
-                />
-              </th>
-              <th className="p-2 text-left">Part Name</th>
-              <th className="p-2 text-left">Part No</th>
-              <th className="p-2 text-left">Customer</th>
-              <th className="p-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedParts.map((p) => (
-              <tr key={p.part_id} className="border-t">
-                <td className="p-2">
+        <div className="w-full overflow-x-auto">
+          <table className="border text-sm min-w-max">
+            <thead>
+              <tr className="bg-gray-200">
+                <th className="p-2">
                   <input
                     type="checkbox"
-                    checked={selectedIds.includes(p.part_id)}
-                    onChange={() => toggleSelect(p.part_id)}
+                    checked={paginatedParts.length > 0 && paginatedParts.every(p => selectedIds.includes(p.part_id))}
+                    onChange={(e) =>
+                      setSelectedIds(e.target.checked
+                        ? [...new Set([...selectedIds, ...paginatedParts.map((p) => p.part_id)])]
+                        : selectedIds.filter(id => !paginatedParts.some(p => p.part_id === id))
+                      )
+                    }
                   />
-                </td>
-                <td className="p-2">{p.part_name}</td>
-                <td className="p-2">{p.part_no}</td>
-                <td className="p-2">{p.customer_name}</td>
-                <td className="p-2">
-                  <button
-                    className="bg-gray-600 text-white px-2 py-1 rounded"
-                    onClick={() => openView(p)}
-                  >
-                    👁 View
-                  </button>
-                </td>
+                </th>
+                {/* 🔥 All columns from schema */}
+                <th className="p-2">Name</th>
+                <th className="p-2">No</th>
+                <th className="p-2">Material</th>
+                <th className="p-2">Weight</th>
+                <th className="p-2">Furnace Cap.</th>
+                <th className="p-2">Batch Qty</th>
+                <th className="p-2">Total Part Wt.</th>
+                <th className="p-2">Drg</th>
+                <th className="p-2">Broach Spline</th>
+                <th className="p-2">Anti Carb</th>
+                <th className="p-2">Hard Temp</th>
+                <th className="p-2">RPM</th>
+                <th className="p-2">Loading Pattern</th>
+                <th className="p-2">Pasting</th>
+                <th className="p-2">Pattern No</th>
+                <th className="p-2">Shot Blasting</th>
+                <th className="p-2">Punching</th>
+                <th className="p-2">Tempering Temp</th>
+                <th className="p-2">Soaking Time</th>
+                <th className="p-2">Case Depth</th>
+                <th className="p-2">Checking Loc</th>
+                <th className="p-2">Cut Off</th>
+                <th className="p-2">Core Hardness</th>
+                <th className="p-2">Surface Hardness</th>
+                <th className="p-2">Microstructure</th>
+                <th className="p-2">Customer</th>
+                <th className="p-2">Process</th>
+                <th className="p-2">Part Image</th>
+                <th className="p-2">Charge Image</th>
+                <th className="p-2">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {((parts != null || parts != undefined) && parts.length > 0) && paginatedParts.map((p) => (
+
+                <tr key={p.part_id} className="border-t">
+                  <td className="p-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(p.part_id)}
+                      onChange={() => toggleSelect(p.part_id)}
+                    />
+                  </td>
+
+                  {/* 🔥 print each field */}
+                  <td className="p-2">{p.name}</td>
+                  <td className="p-2">{p.no}</td>
+                  <td className="p-2">{p.material}</td>
+                  <td className="p-2">{p.weight}</td>
+                  <td className="p-2">{p.furnace_capacity}</td>
+                  <td className="p-2">{p.batch_qty}</td>
+                  <td className="p-2">{p.total_part_weight}</td>
+                  <td className="p-2">{p.drg}</td>
+                  <td className="p-2">{p.broach_spline}</td>
+                  <td className="p-2">{p.anti_carb_paste}</td>
+                  <td className="p-2">{p.hard_temp}</td>
+                  <td className="p-2">{p.rpm}</td>
+                  <td className="p-2">{p.loading_pattern}</td>
+                  <td className="p-2">{p.pasting}</td>
+                  <td className="p-2">{p.pattern_no}</td>
+                  <td className="p-2">{p.shot_blasting}</td>
+                  <td className="p-2">{p.punching}</td>
+                  <td className="p-2">{p.tempering_temp}</td>
+                  <td className="p-2">{p.soaking_time}</td>
+                  <td className="p-2">{p.case_depth}</td>
+                  <td className="p-2">{p.checking_location}</td>
+                  <td className="p-2">{p.cut_off_value}</td>
+                  <td className="p-2">{p.core_hardness}</td>
+                  <td className="p-2">{p.surface_hardness}</td>
+                  <td className="p-2">
+                    {(() => {
+                      try {
+                        const ms = JSON.parse(p.microstructure || "[]");
+                        if (Array.isArray(ms)) {
+                          return ms.map((m, i) => <div key={i}>{m.key}: {m.value}</div>);
+                        } else if (typeof ms === "object") {
+                          return Object.entries(ms).map(([k, v], i) => <div key={i}>{k}: {v}</div>);
+                        }
+                        return "";
+                      } catch {
+                        return "";
+                      }
+                    })()}
+                  </td>
+                  <td className="p-2">{p.customer_name}</td>
+                  <td className="p-2">{p.process_name}</td>
+
+                  <td className="p-2">
+                    {p.part_image && (
+                      <img
+                        src={`http://localhost:5000/uploads/parts/${p.part_image}`}
+                        alt="part"
+                        className="h-16 w-16 object-cover rounded"
+                      />
+                    )}
+                  </td>
+                  <td className="p-2">
+                    {p.charge_image && (
+                      <img
+                        src={`http://localhost:5000/uploads/parts/${p.charge_image}`}
+                        alt="charge"
+                        className="h-16 w-16 object-cover rounded"
+                      />
+                    )}
+                  </td>
+
+
+                  {/* Actions: Edit + Delete */}
+                  <td className="p-2 space-x-2">
+                    <button
+                      className="bg-yellow-400 text-white px-2 py-1 rounded"
+                      onClick={() => startEditFromView(p)}
+                    >
+                      ✏
+                    </button>
+                    {/* <button
+                      className="bg-red-500 text-white px-2 py-1 rounded"
+                      onClick={() => deleteSelected(p.part_id)}
+                    >
+                      🗑
+                    </button> */}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         <div className="flex justify-between items-center mt-3">
           <button
@@ -450,20 +661,20 @@ export default function PartPage() {
 
       {/* FORM MODAL */}
       {showForm && (
-        <div className="fixed inset-0 flex items-start mt-10PA justify-center bg-black/50 overflow-y-auto">
-          <div className="bg-white p-4 rounded w-2/3 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold mb-2">
-              {viewPart ? "Edit Part" : "Create Part"}
+        <div className="fixed inset-0 flex items-start justify-center bg-black/50 overflow-y-auto p-4">
+          <div className="bg-white p-6 rounded-lg w-2/3 max-h-[90vh] overflow-y-auto shadow-lg">
+            <h3 className="text-xl font-bold mb-4 text-gray-800">
+              {editform ? "Edit Part" : "Create Part"}
             </h3>
 
-            {/* Customer + Process selectors with small view buttons */}
-            <div className="grid grid-cols-2 gap-3 mb-3">
+            {/* Customer + Process */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
-                <div className="flex items-end gap-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Customer</label>
+                <div className="flex gap-2">
                   <div className="flex-1">
                     <Autocomplete
-                      label="Customer"
-                      // IMPORTANT: see patched Autocomplete below (supports process/customer)
+                      label=""
                       fetchUrl={`${API}/customers/search`}
                       value={selectedCustomer}
                       onChange={(val) => {
@@ -473,7 +684,7 @@ export default function PartPage() {
                     />
                   </div>
                   <button
-                    className="px-2 py-1 border rounded"
+                    className="px-2 py-1 border rounded text-gray-600 hover:bg-gray-100"
                     onClick={showCustomerPreview}
                     disabled={!selectedCustomer?.id}
                     title="View selected customer"
@@ -484,10 +695,11 @@ export default function PartPage() {
               </div>
 
               <div>
-                <div className="flex items-end gap-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Process</label>
+                <div className="flex gap-2">
                   <div className="flex-1">
                     <Autocomplete
-                      label="Process"
+                      label=""
                       fetchUrl={`${API}/processes/search`}
                       value={selectedProcess}
                       onChange={(val) => {
@@ -497,7 +709,7 @@ export default function PartPage() {
                     />
                   </div>
                   <button
-                    className="px-2 py-1 border rounded"
+                    className="px-2 py-1 border rounded text-gray-600 hover:bg-gray-100"
                     onClick={showProcessPreview}
                     disabled={!selectedProcess?.id}
                     title="View selected process"
@@ -508,263 +720,158 @@ export default function PartPage() {
               </div>
             </div>
 
-            {/* Part fields only */}
-            <div className="grid grid-cols-2 gap-2">
-              {PART_FIELDS.map((field) => {
-                // Decide input type based on field
-                const isDecimal = ["weight", "total_part_weight"].includes(field);
-                const isInteger = ["batch_qty", "hard_temp", "rpm"].includes(field);
-
-                return (
-                  <div key={field}>
-                    <label className="block text-sm mb-1">
-                      {field.replace(/_/g, " ")}
-                    </label>
-                    <input
-                      type={isDecimal || isInteger ? "number" : "text"}
-                      step={isDecimal ? "0.01" : undefined} // allow decimals for decimal fields
-                      className="border p-2 w-full"
-                      value={formData[field] ?? ""}
+            {/* Part fields */}
+            <div className="grid grid-cols-2 gap-4">
+              {PART_SPEC.map((f) => (
+                <div key={f.key}>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    {f.label}
+                  </label>
+                  {f.type === "select" ? (
+                    <select
+                      className="w-full border rounded px-2 py-1 focus:ring focus:ring-blue-200"
+                      value={formData[f.key] || ""}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          [field]:
-                            e.target.value === ""
-                              ? null
-                              : isInteger
-                                ? parseInt(e.target.value, 10)
-                                : isDecimal
-                                  ? parseFloat(e.target.value)
-                                  : e.target.value,
-                        })
+                        setFormData({ ...formData, [f.key]: e.target.value })
                       }
-                      placeholder={field.replace(/_/g, " ")}
+                    >
+                      <option value="">Select</option>
+                      {f.options.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type={f.type === "int" || f.type === "decimal" ? "number" : "text"}
+                      step={f.type === "decimal" ? "0.01" : undefined}
+                      className="w-full border rounded px-2 py-1 focus:ring focus:ring-blue-200"
+                      value={formData[f.key] ?? ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, [f.key]: e.target.value })
+                      }
                     />
-                  </div>
-                );
-              })}
+                  )}
+                </div>
+              ))}
+
+              {/* Microstructure fields */}
               <div className="col-span-2">
-                <label className="block text-sm mb-1">Image 1</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Microstructure
+                </label>
+                {formData?.microstructure?.map((row, i) => (
+                  <div key={i} className="flex gap-2 mb-2 items-center">
+                    <input
+                      className="flex-1 border rounded px-2 py-1"
+                      placeholder="Key (e.g. case, core, bainite...)"
+                      value={row.key}
+                      onChange={(e) => updateMicrostructureRow(i, "key", e.target.value)}
+                    />
+                    <input
+                      className="flex-1 border rounded px-2 py-1"
+                      placeholder="Value"
+                      value={row.value}
+                      onChange={(e) => updateMicrostructureRow(i, "value", e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="px-2 py-1 bg-red-500 text-white rounded"
+                      onClick={() => removeMicrostructureRow(i)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="mt-2 px-3 py-1 bg-green-500 text-white rounded"
+                  onClick={addMicrostructureRow}
+                >
+                  + Add Microstructure
+                </button>
+              </div>
+
+
+              {/* Files with preview */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Part Image (optional)
+                </label>
+                {/* {viewPart?.part_image && (
+                  <img
+                    src={`http://localhost:5000/uploads/parts/${viewPart.part_image}`}
+                    alt="Preview"
+                    className="w-24 h-24 object-cover border mb-2"
+                  />
+                )} */}
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) =>
-                    setFormData({ ...formData, image1: e.target.files[0] || null })
+                    setFormData({ ...formData, part_image: e.target.files[0] || null })
                   }
                 />
               </div>
 
-              <div className="col-span-2">
-                <label className="block text-sm mb-1">Image 2</label>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Charge Image (optional)
+                </label>
+                {/* {viewPart?.charge_image && (
+                  <img
+                    src={`http://localhost:5000/uploads/parts/${viewPart.charge_image}`}
+                    alt="Preview"
+                    className="w-24 h-24 object-cover border mb-2"
+                  />
+                )} */}
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) =>
-                    setFormData({ ...formData, image2: e.target.files[0] || null })
+                    setFormData({ ...formData, charge_image: e.target.files[0] || null })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Drawing (pdf/image) (optional)
+                </label>
+                {/* {viewPart?.drawing && (
+                  <a
+                    href={`http://localhost:5000/uploads/parts/${viewPart.drawing}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 underline block mb-2"
+                  >
+                    View existing file
+                  </a>
+                )} */}
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) =>
+                    setFormData({ ...formData, drawing: e.target.files[0] || null })
                   }
                 />
               </div>
             </div>
 
-
-            <div className="flex justify-end gap-2 mt-3">
+            {/* Buttons */}
+            <div className="flex justify-end gap-3 mt-6">
               <button
-                className="bg-gray-400 text-white px-3 py-1 rounded"
+                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
                 onClick={() => setShowForm(false)}
               >
                 Cancel
               </button>
               <button
-                className="bg-blue-600 text-white px-3 py-1 rounded"
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                 onClick={handleSave}
               >
                 Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* VIEW MODAL */}
-      {showViewModal && viewPart && (
-        <div className="fixed inset-0 flex items-start mt-15 justify-center bg-black/50 overflow-y-auto">
-          <div className="bg-white p-6 rounded w-3/4 max-h-[90vh] overflow-y-auto">
-            <div ref={printRef} className="space-y-8">
-              {/* ---------- HEADER ---------- */}
-              <div className="grid grid-cols-2 gap-6 items-start border border-gray-400 shadow-sm rounded p-4">
-                {/* LEFT: key details */}
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-semibold">Customer:</span> {viewPart.customer_name || "—"}</p>
-                  <p><span className="font-semibold">Part Name:</span> {viewPart.part_name || "—"}</p>
-                  <p><span className="font-semibold">Part No:</span> {viewPart.part_no || "—"}</p>
-                  <p><span className="font-semibold">Material:</span> {viewPart.material || "—"}</p>
-                  <p><span className="font-semibold">Weight:</span> {viewPart.weight || "—"}</p>
-                </div>
-
-                {/* RIGHT: image1 */}
-                {viewPart.image1 && (
-                  <div className="flex justify-end">
-                    <img
-                      src={`http://localhost:5000/uploads/parts/${viewPart.image1}`}
-                      alt="Part Image 1"
-                      className="w-56 h-56 object-cover border-2 border-gray-500 rounded"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* ---------- PROCESS DETAILS ---------- */}
-              <div className="border border-gray-400 shadow-sm rounded">
-                <div className="bg-gray-200 px-3 py-1 font-bold uppercase text-sm">Process Details</div>
-                <div className="p-4 space-y-6 text-sm">
-                  {/* 1. Basic */}
-                  <div>
-                    <h4 className="font-semibold mb-2">Basic</h4>
-                    <div className="grid grid-cols-3 border border-gray-400 divide-x divide-y">
-                      <div className="p-2"><b>Process:</b> {viewPart.process_name || "—"}</div>
-                      <div className="p-2"><b>Loading:</b> {viewPart.loading || "—"}</div>
-                      <div className="p-2"><b>Pasting:</b> {viewPart.pasting || "—"}</div>
-                      <div className="p-2"><b>Pattern No:</b> {viewPart.pattern_no || "—"}</div>
-                      <div className="p-2"><b>Shot Blasting:</b> {viewPart.shot_blasting || "—"}</div>
-                      <div className="p-2"><b>Punching:</b> {viewPart.punching || "—"}</div>
-                    </div>
-                  </div>
-
-                  {/* 2. Tempering */}
-                  <div>
-                    <h4 className="font-semibold mb-2">Tempering</h4>
-                    <div className="grid grid-cols-2 border border-gray-400 divide-x divide-y">
-                      <div className="p-2"><b>Temperature:</b> {viewPart.temperature || "—"}</div>
-                      <div className="p-2"><b>Time:</b> {viewPart.time || "—"}</div>
-                    </div>
-                  </div>
-
-                  {/* 3. Inspection */}
-                  <div>
-                    <h4 className="font-semibold mb-2">Inspection</h4>
-                    <div className="grid grid-cols-3 border border-gray-400 divide-x divide-y">
-                      <div className="p-2"><b>Case Depth:</b> {viewPart.case_depth || "—"}</div>
-                      <div className="p-2"><b>Checking Location:</b> {viewPart.checking_location || "—"}</div>
-                      <div className="p-2"><b>Cut Off Value:</b> {viewPart.cut_off_value || "—"}</div>
-                      <div className="p-2"><b>Core Hardness:</b> {viewPart.core_hardness || "—"}</div>
-                      <div className="p-2"><b>Surface Hardness:</b> {viewPart.surface_hardness || "—"}</div>
-                      <div className="p-2"><b>Microstructure:</b> {viewPart.microstructure || "—"}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* ---------- CHARGE PREP + IMAGE2 ---------- */}
-              <div className="grid grid-cols-2 gap-6 items-start border border-gray-400 shadow-sm rounded p-4">
-                <div className="space-y-2 text-sm">
-                  <h3 className="font-semibold text-lg border-b pb-1">Charge Preparation</h3>
-                  <p><b>Furnace Capacity:</b> {viewPart.furnace_capacity || "—"}</p>
-                  <p><b>Batch Qty:</b> {viewPart.batch_qty || "—"}</p>
-                  <p><b>Total Part Weight:</b> {viewPart.total_part_weight || "—"}</p>
-                </div>
-                {viewPart.image2 && (
-                  <div className="flex justify-end">
-                    <img
-                      src={`http://localhost:5000/uploads/parts/${viewPart.image2}`}
-                      alt="Part Image 2"
-                      className="w-56 h-56 object-cover border-2 border-gray-500 rounded"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* ---------- REMARKS ---------- */}
-              <div className="border border-gray-400 shadow-sm rounded p-4">
-                <h3 className="font-semibold text-lg border-b pb-2 mb-2">Remarks</h3>
-                <p className="min-h-[80px] p-3 text-gray-700 border border-gray-300 rounded bg-gray-50">
-                  {viewPart.remarks || "—"}
-                </p>
-              </div>
-
-              {/* ---------- SIGNATURES ---------- */}
-              <div className="grid grid-cols-2 gap-8 border-t pt-6">
-                <div>
-                  <p className="font-medium">Prepared By:</p>
-                  <div className="h-16 border-b-2 border-gray-500 my-2" />
-                  <p className="text-gray-600">Name: __________</p>
-                </div>
-                <div>
-                  <p className="font-medium">Approved By:</p>
-                  <div className="h-16 border-b-2 border-gray-500 my-2" />
-                  <p className="text-gray-600">Name: __________</p>
-                </div>
-              </div>
-            </div>
-
-
-            {/* Action Buttons */}
-            <div className="mt-4 flex gap-2 justify-end">
-              <button
-                className="bg-yellow-500 text-white px-3 py-1 rounded"
-                onClick={() => {
-                  setShowViewModal(false); // close modal when editing
-                  startEditFromView();
-                }}
-              >
-                ✏ Edit
-              </button>
-
-
-              <button
-                className="bg-green-600 text-white px-3 py-1 rounded"
-                onClick={() => {
-                  if (printRef.current) {
-                    const printContents = printRef.current.innerHTML;
-                    const printWindow = window.open("", "", "width=800,height=600");
-                    printWindow.document.write(`
-  <html>
-    <head>
-      <title>Print</title>
-      <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-      <style>
-      @import url('https://fonts.googleapis.com/css2?family=Ancizar+Sans:ital,wght@0,100..1000;1,100..1000&display=swap');
-      *{
-      font-family: 'Ancizar Sans', sans-serif;
-      }
-        body { font-family: sans-serif; padding: 20px; }
-        img { max-width: 100%; height: auto; }
-      </style>
-    </head>
-    <body>${printContents}</body>
-  </html>
-`);
-
-                    printWindow.document.close();
-                    // printWindow.print();
-                  }
-                }}
-              >
-                🖨 Print
-              </button>
-
-              {/* <button
-                className="bg-green-600 text-white px-3 py-1 rounded"
-                onClick={handleDownloadPdf}
-              >
-                📄 Export PDF
-              </button> */}
-
-
-              <button
-                className="bg-red-600 text-white px-3 py-1 rounded"
-                onClick={() => {
-                  setSelectedIds([viewPart.part_id]);
-                  setShowDeleteConfirm(true);
-                  setShowViewModal(false); // close modal on delete
-                }}
-              >
-                🗑 Delete
-              </button>
-              <button
-                className="bg-gray-500 text-white px-3 py-1 rounded"
-                onClick={() => setShowViewModal(false)}
-              >
-                Close
               </button>
             </div>
           </div>

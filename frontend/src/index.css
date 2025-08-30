@@ -5,6 +5,11 @@
   font-family: 'Ancizar Sans', sans-serif;
 }
 
+.Toastify__toast-container {
+  z-index: 11111 !important;
+}
+
+
 html, body {
   margin-top: 50px;
   font-size: 18.5px;

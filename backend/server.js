@@ -19,7 +19,7 @@ app.use(cors());
 app.use(bodyParser.json()); // parse JSON request bodies
 
 // ✅ Serve uploaded files statically
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ✅ Routes
 app.use("/api/parts", partRoutes);

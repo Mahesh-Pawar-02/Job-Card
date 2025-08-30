@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { upload } = require("../middleware/upload.js");
+const { upload, multerErrorHandler } = require("../middleware/upload.js");
 const {
   getAllParts,
   getPartById,
@@ -14,8 +14,9 @@ const {
 router.post(
   "/",
   upload.fields([
-    { name: "image1", maxCount: 1 }, 
-    { name: "image2", maxCount: 1 }
+    { name: "part_image", maxCount: 1 },
+    { name: "charge_image", maxCount: 1 },
+    { name: "drawing", maxCount: 1 },
   ]),
   createPart
 );
@@ -24,8 +25,9 @@ router.post(
 router.put(
   "/:id",
   upload.fields([
-    { name: "image1", maxCount: 1 },
-    { name: "image2", maxCount: 1 }
+    { name: "part_image", maxCount: 1 },
+    { name: "charge_image", maxCount: 1 },
+    { name: "drawing", maxCount: 1 },
   ]),
   updatePart
 );
@@ -35,5 +37,7 @@ router.get("/", getAllParts);
 router.get("/:id", getPartById);
 router.post("/search", searchParts);
 router.delete("/", deleteMultipleParts);
+
+router.use(multerErrorHandler)
 
 module.exports = router;
