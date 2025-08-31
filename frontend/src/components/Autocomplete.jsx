@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
-export default function Autocomplete({ label, fetchUrl, value, onChange }) {
+export default function Autocomplete({ label, fetchUrl, value, onChange, disabled  }) {
   const [input, setInput] = useState(value?.name || "");
   const [suggestions, setSuggestions] = useState([]);
   const suppressFetch = useRef(false);
@@ -49,7 +49,7 @@ export default function Autocomplete({ label, fetchUrl, value, onChange }) {
     item.customer_id ?? item.process_id ?? item.part_id ?? item.id;
 
   const pickName = (item) =>
-    item.customer_name ?? item.process_name ?? item.part_name ?? item.name;
+    item.customer_name ?? item.short_name ?? item.part_name ?? item.name;
 
   return (
     <div>
@@ -57,9 +57,10 @@ export default function Autocomplete({ label, fetchUrl, value, onChange }) {
       <input
         type="text"
         value={input}
+        disabled={disabled}
         onChange={(e) => {
           setInput(e.target.value);
-          onChange(null); // reset until user selects
+          setSuggestions([])
         }}
         className="border p-2 w-full"
         placeholder={`Search ${label?.toLowerCase() || ""}`}

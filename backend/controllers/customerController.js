@@ -165,13 +165,12 @@ exports.deleteCustomer = async (req, res) => {
 exports.searchCustomers = async (req, res) => {
   try {
     const q = String(req.query.q || "").trim();
-    const like = `%${q}%`;
+    const like = `${q}%`;
     const [rows] = await pool.query(
       `SELECT customer_id, customer_name FROM customer
-       WHERE customer_name LIKE ? OR vendor_code LIKE ? OR phone_no LIKE ?
-       ORDER BY customer_name
+       WHERE customer_name LIKE ?
        LIMIT 10`,
-      [like, like, like]
+      [like]
     );
     res.json(rows);
   } catch (err) {

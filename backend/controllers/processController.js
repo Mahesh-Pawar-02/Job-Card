@@ -102,7 +102,7 @@ exports.searchProcesses = async (req, res) => {
       const [rows] = await pool.query("SELECT process_id, process_name, short_name FROM process ORDER BY process_name LIMIT 50");
       return res.json(rows);
     }
-    const like = `%${q}%`;
+    const like = `${q}%`;
     const [rows] = await pool.query(
       "SELECT process_id, process_name, short_name FROM process WHERE process_name LIKE ? OR short_name LIKE ? LIMIT 10",
       [like, like]

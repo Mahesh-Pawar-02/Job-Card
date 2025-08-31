@@ -30,11 +30,12 @@ exports.getAllParts = async (req, res) => {
         p.*,
         c.customer_name,
         c.customer_id,
-        pr.process_name,
+        pr.short_name,
         pr.process_id
       FROM part p
       JOIN customer c ON p.customer_id = c.customer_id
       JOIN process pr ON p.process_id = pr.process_id
+      ORDER BY p.id DESC
     `);
     res.json(rows);
   } catch (err) {
@@ -152,13 +153,21 @@ exports.searchParts = async (req, res) => {
 // Create part
 exports.createPart = async (req, res) => {
   try {
-    const { name, no } = req.body;
-    if (!name || !no) {
-      return res.status(400).json({ error: "Part name and number are required." });
+
+    const { customer_id, name, no } = req.body;
+    // validations
+    if (!customer_id) {
+      return res.status(400).json({ error: "Customer should be selected from suggestion list only." });
+    }
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ error: "Part name should not be empty." });
+    }
+    if (!no || no.trim() === "") {
+      return res.status(400).json({ error: "Part no should not be empty." });
     }
 
+
     const {
-      customer_id,
       process_id,
       // basics 
       material,
@@ -247,10 +256,7 @@ exports.updatePart = async (req, res) => {
     if (!id) return res.status(400).json({ error: "Part ID is required for update." });
 
     const {
-      customer_id,
       process_id,
-      name,
-      no,
       material,
       weight,
       furnace_capacity,
@@ -310,7 +316,6 @@ exports.updatePart = async (req, res) => {
     await pool.query(
       `
   UPDATE part SET
-    customer_id = ?,
     process_id = ?,
     loading_pattern = ?,
     pasting = ?,
@@ -325,8 +330,6 @@ exports.updatePart = async (req, res) => {
     core_hardness = ?,
     surface_hardness = ?,
     microstructure = ?,
-    name = ?,
-    no = ?,
     material = ?,
     weight = ?,
     furnace_capacity = ?,
@@ -343,7 +346,6 @@ exports.updatePart = async (req, res) => {
   WHERE id = ?
   `,
       [
-        customer_id ?? null,
         process_id ?? null,
         loading_pattern ?? null,
         pasting ?? null,
@@ -358,8 +360,6 @@ exports.updatePart = async (req, res) => {
         core_hardness ?? null,
         surface_hardness ?? null,
         microJSON,
-        name,
-        no,
         material ?? null,
         weight ?? null,
         furnace_capacity ?? null,
@@ -392,7 +392,24 @@ exports.deleteMultipleParts = async (req, res) => {
       return res.status(400).json({ error: "Please provide valid part IDs to delete." });
     }
 
-    // तुझं delete code जसंच्या तसं...
+    // 1️⃣ Fetch old file paths
+    const [rows] = await pool.query(
+      `SELECT part_image, charge_image, drawing FROM part WHERE id IN (?)`,
+      [ids]
+    );
+
+    // 2️⃣ Delete files safely
+    rows.forEach((part) => {
+      ["part_image", "charge_image", "drawing"].forEach((field) => {
+        safeUnlink(part[field]);
+      });
+    });
+
+    // 3️⃣ Delete DB rows
+    const [result] = await pool.query(
+      `DELETE FROM part WHERE id IN (?)`,
+      [ids]
+    );
 
     res.json({ message: `Deleted ${result.affectedRows} part(s) successfully` });
   } catch (err) {

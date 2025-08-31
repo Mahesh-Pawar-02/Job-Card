@@ -5,37 +5,41 @@ import { toast } from "react-toastify";
 const API = "http://localhost:5000/api";
 
 const PART_SPEC = [
-  { key: "name", label: "Part Name", type: "text" },
-  { key: "no", label: "Part No", type: "text" },
-  { key: "material", label: "Material", type: "text" },
-  { key: "weight", label: "Weight", type: "decimal" },
-  { key: "furnace_capacity", label: "Furnace Capacity", type: "text" },
-  { key: "batch_qty", label: "Batch Quantity", type: "int" },
-  { key: "total_part_weight", label: "Total Part Weight", type: "decimal" },
-  { key: "drg", label: "DRG", type: "select", options: ["Yes", "No", "N/A"] },
-  { key: "broach_spline", label: "Broach Spline", type: "text" },
-  { key: "anti_carb_paste", label: "Anti Carb Paste", type: "text" },
-  { key: "hard_temp", label: "Hard Temp (°C)", type: "int" },
-  { key: "rpm", label: "RPM", type: "int" },
+  // most imp, can not change once added
+  { key: "name", label: "Part Name", type: "text", section: "basic" },
+  { key: "no", label: "Part No", type: "text", section: "basic" },
+
+  // other part fields
+  { key: "material", label: "Material", type: "text", section: "specs" },
+  { key: "weight", label: "Weight", type: "decimal", section: "specs" },
+  { key: "furnace_capacity", label: "Furnace Capacity", type: "text", section: "specs" },
+  { key: "batch_qty", label: "Batch Quantity", type: "int", section: "specs" },
+  { key: "total_part_weight", label: "Total Part Weight", type: "decimal", section: "specs" },
+  { key: "drg", label: "DRG", type: "select", options: ["Yes", "No", "N/A"], section: "specs" },
+  { key: "broach_spline", label: "Broach Spline", type: "text", section: "specs" },
+  { key: "anti_carb_paste", label: "Anti Carb Paste", type: "text", section: "specs" },
+  { key: "hard_temp", label: "Hard Temp (°C)", type: "int", section: "specs" },
+  { key: "rpm", label: "RPM", type: "int", section: "specs" },
 
   // process related
-  { key: "loading_pattern", label: "Loading Pattern", type: "text" },
-  { key: "pasting", label: "Pasting", type: "text" },
-  { key: "pattern_no", label: "Pattern No", type: "int" },
-  { key: "shot_blasting", label: "Shot Blasting", type: "text" },
-  { key: "punching", label: "Punching", type: "text" },
-  { key: "tempering_temp", label: "Tempering Temp", type: "int" },
-  { key: "soaking_time", label: "Soaking Time", type: "text" },
+  { key: "loading_pattern", label: "Loading Pattern", type: "text", section: "process" },
+  { key: "pasting", label: "Pasting", type: "text", section: "process" },
+  { key: "pattern_no", label: "Pattern No", type: "int", section: "process" },
+  { key: "shot_blasting", label: "Shot Blasting", type: "text", section: "process" },
+  { key: "punching", label: "Punching", type: "text", section: "process" },
+  { key: "tempering_temp", label: "Tempering Temp", type: "int", section: "process" },
+  { key: "soaking_time", label: "Soaking Time", type: "text", section: "process" },
 
   // inspection
-  { key: "case_depth", label: "Case Depth", type: "text" },
-  { key: "checking_location", label: "Checking Location", type: "text" },
-  { key: "cut_off_value", label: "Cut Off Value", type: "text" },
-  { key: "core_hardness", label: "Core Hardness", type: "text" },
-  { key: "surface_hardness", label: "Surface Hardness", type: "text" },
+  { key: "case_depth", label: "Case Depth", type: "text", section: "inspection" },
+  { key: "checking_location", label: "Checking Location", type: "text", section: "inspection" },
+  { key: "cut_off_value", label: "Cut Off Value", type: "text", section: "inspection" },
+  { key: "core_hardness", label: "Core Hardness", type: "text", section: "inspection" },
+  { key: "surface_hardness", label: "Surface Hardness", type: "text", section: "inspection" },
 
-  // microstructure handled separately
+  // microstructure handled separately → section वेगळं नाही
 ];
+
 
 
 export default function PartPage() {
@@ -58,6 +62,7 @@ export default function PartPage() {
 
   // form state
   const [formData, setFormData] = useState({
+    customer: "",
     customer_id: "",
     process_id: "",
     // core part fields
@@ -127,6 +132,10 @@ export default function PartPage() {
     fetchParts();
   }, []);
 
+  useEffect(() => {
+    console.log("Parts updated:", parts);
+  }, [parts]);
+
   const fetchParts = async () => {
     try {
       // list endpoint returns: part_id, part_name, part_no, customer_name
@@ -181,18 +190,20 @@ export default function PartPage() {
   const handleSave = async () => {
     console.log(selectedCustomer, selectedProcess);
     try {
-      // require selections (same as you had)
-      if (!selectedCustomer?.id || !selectedProcess?.id) {
-        alert("Select customer & process from suggestions");
-        return;
-      }
-
       // Build base payload from form state but ensure customer/process IDs come from selectors
       const payloadBase = {
         ...formData,
-        customer_id: selectedCustomer.id,
-        process_id: selectedProcess.id,
+        process_id: selectedCustomer != null ? selectedProcess.id : null,
+        customer: selectedCustomer != null ? selectedCustomer.name : null,
       };
+
+      // जर edit मोड असेल तर immutable fields काढून टाक
+      if (editform) {
+        delete payloadBase.customer_id;
+      } else {
+        payloadBase.customer_id = selectedCustomer != null ? selectedCustomer.id : null;
+      }
+
 
       // Numeric normalization (convert "" or non-number -> null)
       const numericKeys = [
@@ -279,6 +290,7 @@ export default function PartPage() {
       toast.success(editform ? "Part updated successfully!" : "Part created successfully!");
 
       // success: close modal, reset, reload parts
+      setEditForm(null)
       setShowForm(false);
       resetForm(); // your existing resetForm should reset microstructure to [{key:"",value:""}]
       fetchParts();
@@ -388,29 +400,46 @@ export default function PartPage() {
       core_hardness: p.core_hardness ?? "",
       surface_hardness: p.surface_hardness ?? "",
       microstructure: (() => {
+        if (!p.microstructure) return [{ key: "", value: "" }];
         try {
-          const parsed = JSON.parse(p.microstructure || "[]");
-          if (Array.isArray(parsed)) return parsed;
-          // fallback if backend still sends {case:.., core:..}
-          if (typeof parsed === "object") {
-            return Object.entries(parsed).map(([key, value]) => ({ key, value }));
+          let parsed = p.microstructure;
+
+          // जर string असेल तर parse कर
+          if (typeof parsed === "string") {
+            parsed = JSON.parse(parsed);
           }
+
+          // जर array असेल (उदा. [{key,value}, ...])
+          if (Array.isArray(parsed)) {
+            return parsed;
+          }
+
+          // जर object असेल (उदा. { core: "xyz", case: "abc" })
+          if (typeof parsed === "object" && parsed !== null) {
+            return Object.entries(parsed).map(([k, v]) => ({
+              key: k,
+              value: v,
+            }));
+          }
+
+          // fallback
           return [{ key: "", value: "" }];
         } catch {
           return [{ key: "", value: "" }];
         }
       })(),
 
+
       // DO NOT preload file names into file inputs
       part_image: null,
       charge_image: null,
       drawing: null,
       customer_name: p.customer_name || "",
-      process_name: p.process_name || "",
+      process_name: p.short_name || "",
     });
 
     setSelectedCustomer({ id: p.customer_id, name: p.customer_name });
-    setSelectedProcess({ id: p.process_id, name: p.process_name });
+    setSelectedProcess({ id: p.process_id, name: p.short_name });
 
     console.log("p:", p);
 
@@ -489,152 +518,101 @@ export default function PartPage() {
           </select>
         </div>
 
-
+        {/* TABLE of parts */}
         <div className="w-full overflow-x-auto">
-          <table className="border text-sm min-w-max">
-            <thead>
+          <table className="text-sm min-w-max border-separate border-spacing-2 border border-gray-400 dark:border-gray-500 ">
+            <thead className="">
               <tr className="bg-gray-200">
-                <th className="p-2">
+                <th className="p-2 border border-gray-300 dark:border-gray-600">
                   <input
                     type="checkbox"
-                    checked={paginatedParts.length > 0 && paginatedParts.every(p => selectedIds.includes(p.part_id))}
+                    checked={paginatedParts.length > 0 && paginatedParts.every(p => selectedIds.includes(p.id))}
                     onChange={(e) =>
                       setSelectedIds(e.target.checked
-                        ? [...new Set([...selectedIds, ...paginatedParts.map((p) => p.part_id)])]
-                        : selectedIds.filter(id => !paginatedParts.some(p => p.part_id === id))
+                        ? [...new Set([...selectedIds, ...paginatedParts.map((p) => p.id)])]
+                        : selectedIds.filter(id => !paginatedParts.some(p => p.id === id))
                       )
                     }
                   />
                 </th>
                 {/* 🔥 All columns from schema */}
-                <th className="p-2">Name</th>
-                <th className="p-2">No</th>
-                <th className="p-2">Material</th>
-                <th className="p-2">Weight</th>
-                <th className="p-2">Furnace Cap.</th>
-                <th className="p-2">Batch Qty</th>
-                <th className="p-2">Total Part Wt.</th>
-                <th className="p-2">Drg</th>
-                <th className="p-2">Broach Spline</th>
-                <th className="p-2">Anti Carb</th>
-                <th className="p-2">Hard Temp</th>
-                <th className="p-2">RPM</th>
-                <th className="p-2">Loading Pattern</th>
-                <th className="p-2">Pasting</th>
-                <th className="p-2">Pattern No</th>
-                <th className="p-2">Shot Blasting</th>
-                <th className="p-2">Punching</th>
-                <th className="p-2">Tempering Temp</th>
-                <th className="p-2">Soaking Time</th>
-                <th className="p-2">Case Depth</th>
-                <th className="p-2">Checking Loc</th>
-                <th className="p-2">Cut Off</th>
-                <th className="p-2">Core Hardness</th>
-                <th className="p-2">Surface Hardness</th>
-                <th className="p-2">Microstructure</th>
-                <th className="p-2">Customer</th>
-                <th className="p-2">Process</th>
-                <th className="p-2">Part Image</th>
-                <th className="p-2">Charge Image</th>
-                <th className="p-2">Actions</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Customer</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Part Name</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Part No</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Material</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Weight</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Batch Qty</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Broach Spline</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Anti Carb</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Loading Pattern</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Pattern No</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Shot Blasting</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Case Depth</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Cut Off</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Core Hardness</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Surface Hardness</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Process</th>
+                <th className="p-2 border border-gray-300 dark:border-gray-600">Actions</th>
               </tr>
             </thead>
-            <tbody>
-              {((parts != null || parts != undefined) && parts.length > 0) && paginatedParts.map((p) => (
+            <tbody className="">
 
-                <tr key={p.part_id} className="border-t">
-                  <td className="p-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(p.part_id)}
-                      onChange={() => toggleSelect(p.part_id)}
-                    />
-                  </td>
+              {Array.isArray(paginatedParts) && paginatedParts.length > 0 ? (
+                paginatedParts.map((p) => (
 
-                  {/* 🔥 print each field */}
-                  <td className="p-2">{p.name}</td>
-                  <td className="p-2">{p.no}</td>
-                  <td className="p-2">{p.material}</td>
-                  <td className="p-2">{p.weight}</td>
-                  <td className="p-2">{p.furnace_capacity}</td>
-                  <td className="p-2">{p.batch_qty}</td>
-                  <td className="p-2">{p.total_part_weight}</td>
-                  <td className="p-2">{p.drg}</td>
-                  <td className="p-2">{p.broach_spline}</td>
-                  <td className="p-2">{p.anti_carb_paste}</td>
-                  <td className="p-2">{p.hard_temp}</td>
-                  <td className="p-2">{p.rpm}</td>
-                  <td className="p-2">{p.loading_pattern}</td>
-                  <td className="p-2">{p.pasting}</td>
-                  <td className="p-2">{p.pattern_no}</td>
-                  <td className="p-2">{p.shot_blasting}</td>
-                  <td className="p-2">{p.punching}</td>
-                  <td className="p-2">{p.tempering_temp}</td>
-                  <td className="p-2">{p.soaking_time}</td>
-                  <td className="p-2">{p.case_depth}</td>
-                  <td className="p-2">{p.checking_location}</td>
-                  <td className="p-2">{p.cut_off_value}</td>
-                  <td className="p-2">{p.core_hardness}</td>
-                  <td className="p-2">{p.surface_hardness}</td>
-                  <td className="p-2">
-                    {(() => {
-                      try {
-                        const ms = JSON.parse(p.microstructure || "[]");
-                        if (Array.isArray(ms)) {
-                          return ms.map((m, i) => <div key={i}>{m.key}: {m.value}</div>);
-                        } else if (typeof ms === "object") {
-                          return Object.entries(ms).map(([k, v], i) => <div key={i}>{k}: {v}</div>);
-                        }
-                        return "";
-                      } catch {
-                        return "";
-                      }
-                    })()}
-                  </td>
-                  <td className="p-2">{p.customer_name}</td>
-                  <td className="p-2">{p.process_name}</td>
-
-                  <td className="p-2">
-                    {p.part_image && (
-                      <img
-                        src={`http://localhost:5000/uploads/parts/${p.part_image}`}
-                        alt="part"
-                        className="h-16 w-16 object-cover rounded"
+                  <tr key={p.id} className="">
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(p.id)}
+                        onChange={() => toggleSelect(p.id)}
                       />
-                    )}
-                  </td>
-                  <td className="p-2">
-                    {p.charge_image && (
-                      <img
-                        src={`http://localhost:5000/uploads/parts/${p.charge_image}`}
-                        alt="charge"
-                        className="h-16 w-16 object-cover rounded"
-                      />
-                    )}
-                  </td>
+                    </td>
+
+                    {/* 🔥 print each field */}
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.customer_name}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.name}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.no}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.material}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.weight}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.batch_qty}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.broach_spline}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.anti_carb_paste}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.loading_pattern}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.pattern_no}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.shot_blasting}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.case_depth}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.cut_off_value}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.core_hardness}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.surface_hardness}</td>
+                    <td className="p-2 border border-gray-300 dark:border-gray-700">{p.short_name}</td>
 
 
-                  {/* Actions: Edit + Delete */}
-                  <td className="p-2 space-x-2">
-                    <button
-                      className="bg-yellow-400 text-white px-2 py-1 rounded"
-                      onClick={() => startEditFromView(p)}
-                    >
-                      ✏
-                    </button>
-                    {/* <button
+                    {/* Actions: Edit + Delete */}
+                    <td className="p-2 space-x-2 border border-gray-300 dark:border-gray-700">
+                      <button
+                        className="bg-yellow-400 text-white px-2 py-1 rounded"
+                        onClick={() => startEditFromView(p)}
+                      >
+                        ✏
+                      </button>
+                      {/* <button
                       className="bg-red-500 text-white px-2 py-1 rounded"
                       onClick={() => deleteSelected(p.part_id)}
                     >
                       🗑
                     </button> */}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan={13} className="p-4 text-center text-gray-500">No Parts</td></tr>
+              )}
             </tbody>
           </table>
         </div>
 
+        {/* pagination controllers ◀ Prev Next ▶ */}
         <div className="flex justify-between items-center mt-3">
           <button
             className="px-3 py-1 border rounded disabled:opacity-50"
@@ -667,96 +645,161 @@ export default function PartPage() {
               {editform ? "Edit Part" : "Create Part"}
             </h3>
 
-            {/* Customer + Process */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Customer</label>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <Autocomplete
-                      label=""
-                      fetchUrl={`${API}/customers/search`}
-                      value={selectedCustomer}
-                      onChange={(val) => {
-                        setSelectedCustomer(val);
-                        setFormData((f) => ({ ...f, customer_id: val?.id || "" }));
-                      }}
-                    />
+            {/* SECTION 1: Basic Info */}
+            <div className="bg-gray-50 p-4 rounded-lg border mb-6">
+              <h4 className="text-lg font-semibold mb-3 border-b pb-1">Basic Info</h4>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Customer */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Customer</label>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Autocomplete
+                        label=""
+                        fetchUrl={`${API}/customers/search`}
+                        value={selectedCustomer}
+                        onChange={(val) => {
+                          setSelectedCustomer(val);
+                          setFormData((f) => ({ ...f, customer_id: val?.id || "" }));
+                        }}
+                        disabled={!!editform}
+                      />
+                    </div>
+                    <button
+                      className="px-2 py-1 border rounded text-gray-600 hover:bg-gray-100"
+                      onClick={showCustomerPreview}
+                      disabled={!selectedCustomer?.id}
+                      title="View selected customer"
+                    >
+                      🔍
+                    </button>
                   </div>
-                  <button
-                    className="px-2 py-1 border rounded text-gray-600 hover:bg-gray-100"
-                    onClick={showCustomerPreview}
-                    disabled={!selectedCustomer?.id}
-                    title="View selected customer"
-                  >
-                    🔍
-                  </button>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Process</label>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <Autocomplete
-                      label=""
-                      fetchUrl={`${API}/processes/search`}
-                      value={selectedProcess}
-                      onChange={(val) => {
-                        setSelectedProcess(val);
-                        setFormData((f) => ({ ...f, process_id: val?.id || "" }));
-                      }}
-                    />
-                  </div>
-                  <button
-                    className="px-2 py-1 border rounded text-gray-600 hover:bg-gray-100"
-                    onClick={showProcessPreview}
-                    disabled={!selectedProcess?.id}
-                    title="View selected process"
-                  >
-                    🔍
-                  </button>
+                {/* Part Name */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Part Name</label>
+                  <input
+                    type="text"
+                    className="w-full border rounded px-2 py-1"
+                    value={formData.name || ""}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    disabled={!!editform}
+                  />
+                </div>
+
+                {/* Part No */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Part No</label>
+                  <input
+                    type="text"
+                    className="w-full border rounded px-2 py-1"
+                    value={formData.no || ""}
+                    onChange={(e) => setFormData({ ...formData, no: e.target.value })}
+                    disabled={!!editform}
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Part fields */}
-            <div className="grid grid-cols-2 gap-4">
-              {PART_SPEC.map((f) => (
-                <div key={f.key}>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    {f.label}
-                  </label>
-                  {f.type === "select" ? (
-                    <select
-                      className="w-full border rounded px-2 py-1 focus:ring focus:ring-blue-200"
-                      value={formData[f.key] || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, [f.key]: e.target.value })
-                      }
+            {/* SECTION 2: Process Info */}
+            <div className="bg-gray-50 p-4 rounded-lg border mb-6">
+              <h4 className="text-lg font-semibold mb-3 border-b pb-1">Process Info</h4>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Process */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Process</label>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Autocomplete
+                        label=""
+                        fetchUrl={`${API}/processes/search`}
+                        value={selectedProcess}
+                        onChange={(val) => {
+                          setSelectedProcess(val);
+                          setFormData((f) => ({ ...f, process_id: val?.id || "" }));
+                        }}
+                      />
+                    </div>
+                    <button
+                      className="px-2 py-1 border rounded text-gray-600 hover:bg-gray-100"
+                      onClick={showProcessPreview}
+                      disabled={!selectedProcess?.id}
+                      title="View selected process"
                     >
-                      <option value="">Select</option>
-                      {f.options.map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
+                      🔍
+                    </button>
+                  </div>
+                </div>
+
+                {PART_SPEC.filter(f => f.section === "process").map((f) => (
+                  <div key={f.key}>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">{f.label}</label>
                     <input
                       type={f.type === "int" || f.type === "decimal" ? "number" : "text"}
                       step={f.type === "decimal" ? "0.01" : undefined}
-                      className="w-full border rounded px-2 py-1 focus:ring focus:ring-blue-200"
+                      className="w-full border rounded px-2 py-1"
                       value={formData[f.key] ?? ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, [f.key]: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, [f.key]: e.target.value })}
                     />
-                  )}
-                </div>
-              ))}
+                  </div>
+                ))}
+              </div>
+            </div>
 
-              {/* Microstructure fields */}
+            {/* SECTION 3: Material & Specs */}
+            <div className="bg-gray-50 p-4 rounded-lg border mb-6">
+              <h4 className="text-lg font-semibold mb-3 border-b pb-1">Material & Specs</h4>
+              <div className="grid grid-cols-2 gap-4">
+                {PART_SPEC.filter(f => f.section === "specs").map((f) => (
+                  <div key={f.key}>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">{f.label}</label>
+                    {f.type === "select" ? (
+                      <select
+                        className="w-full border rounded px-2 py-1"
+                        value={formData[f.key] || ""}
+                        onChange={(e) => setFormData({ ...formData, [f.key]: e.target.value })}
+                      >
+                        <option value="">Select</option>
+                        {f.options.map((o) => (
+                          <option key={o} value={o}>{o}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={f.type === "int" || f.type === "decimal" ? "number" : "text"}
+                        step={f.type === "decimal" ? "0.01" : undefined}
+                        className="w-full border rounded px-2 py-1"
+                        value={formData[f.key] ?? ""}
+                        onChange={(e) => setFormData({ ...formData, [f.key]: e.target.value })}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* SECTION 4: Inspection */}
+            <div className="bg-gray-50 p-4 rounded-lg border mb-6">
+              <h4 className="text-lg font-semibold mb-3 border-b pb-1">Inspection Parameters</h4>
+              <div className="grid grid-cols-2 gap-4">
+                {PART_SPEC.filter(f => f.section === "inspection").map((f) => (
+                  <div key={f.key}>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">{f.label}</label>
+                    <input
+                      type="text"
+                      className="w-full border rounded px-2 py-1"
+                      value={formData[f.key] ?? ""}
+                      onChange={(e) => setFormData({ ...formData, [f.key]: e.target.value })}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* SECTION 5: Microstructure */}
+            <div className="bg-gray-50 p-4 rounded-lg border mb-6">
+              <h4 className="text-lg font-semibold mb-3 border-b pb-1">Microstructure</h4>
               <div className="col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Microstructure
@@ -792,70 +835,75 @@ export default function PartPage() {
                   + Add Microstructure
                 </button>
               </div>
+            </div>
 
-
-              {/* Files with preview */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Part Image (optional)
-                </label>
-                {/* {viewPart?.part_image && (
-                  <img
-                    src={`http://localhost:5000/uploads/parts/${viewPart.part_image}`}
-                    alt="Preview"
-                    className="w-24 h-24 object-cover border mb-2"
+            {/* SECTION 6: File Uploads */}
+            <div className="bg-gray-50 p-4 rounded-lg border mb-6">
+              <h4 className="text-lg font-semibold mb-3 border-b pb-1">Attachments</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Part Image (optional)
+                  </label>
+                  {editform?.part_image && (
+                    <img
+                      src={`http://localhost:5000/uploads/parts/${editform.part_image}`}
+                      alt="Preview"
+                      className="w-24 h-24 object-cover border mb-2"
+                    />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) =>
+                      setFormData({ ...formData, part_image: e.target.files[0] || null })
+                    }
                   />
-                )} */}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setFormData({ ...formData, part_image: e.target.files[0] || null })
-                  }
-                />
-              </div>
+                </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Charge Image (optional)
-                </label>
-                {/* {viewPart?.charge_image && (
-                  <img
-                    src={`http://localhost:5000/uploads/parts/${viewPart.charge_image}`}
-                    alt="Preview"
-                    className="w-24 h-24 object-cover border mb-2"
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Charge Image (optional)
+                  </label>
+                  {editform?.charge_image && (
+                    <img
+                      src={`http://localhost:5000/uploads/parts/${editform.charge_image}`}
+                      alt="Preview"
+                      className="w-24 h-24 object-cover border mb-2"
+                    />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) =>
+                      setFormData({ ...formData, charge_image: e.target.files[0] || null })
+                    }
                   />
-                )} */}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setFormData({ ...formData, charge_image: e.target.files[0] || null })
-                  }
-                />
-              </div>
+                </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Drawing (pdf/image) (optional)
-                </label>
-                {/* {viewPart?.drawing && (
-                  <a
-                    href={`http://localhost:5000/uploads/parts/${viewPart.drawing}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-600 underline block mb-2"
-                  >
-                    View existing file
-                  </a>
-                )} */}
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={(e) =>
-                    setFormData({ ...formData, drawing: e.target.files[0] || null })
-                  }
-                />
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Drawing (pdf/image) (optional)
+                  </label>
+                  {editform?.drawing && (
+                    <a
+                      href={`http://localhost:5000/uploads/parts/${editform.drawing}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 underline block mb-2"
+                    >
+                      View existing file
+                    </a>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) =>
+                      setFormData({ ...formData, drawing: e.target.files[0] || null })
+                    }
+                  />
+                </div>
+
               </div>
             </div>
 

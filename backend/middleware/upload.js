@@ -7,8 +7,21 @@ const storage = multer.diskStorage({
     cb(null, "uploads/parts");
   },
   filename: (req, file, cb) => {
-    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
+    const { customer, name, no } = req.body;
+
+    // 🔥 req.body मध्ये values नसेल तर थेट error
+    if (!customer || !name || !no) {
+      return cb(new Error("customer, part_name आणि part_no required आहेत for uploading files"));
+    }
+
+    // 4-5 random chars based on time
+    const random = Date.now().toString(36).slice(-5);
+
+    const finalName = `${customer}_${name}_${no}_${random}${path.extname(
+      file.originalname
+    )}`;
+
+    cb(null, finalName);
   },
 });
 

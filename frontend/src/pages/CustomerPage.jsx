@@ -208,9 +208,9 @@ export default function CustomerPage() {
 
         <table className="min-w-full border">
           <thead>
+            
             <tr className="bg-gray-100">
               <th className="border p-2"><input type="checkbox" checked={isAllSelected} onChange={(e) => toggleSelectAll(e.target.checked)} /></th>
-              <th className="border p-2">ID</th>
               <th className="border p-2">Name</th>
               <th className="border p-2">Address</th>
               <th className="border p-2">Vendor Code</th>
@@ -230,8 +230,10 @@ export default function CustomerPage() {
             ) : customers.map((c) => (
               <tr key={c.customer_id} className="hover:bg-gray-50">
                 <td className="border p-2"><input type="checkbox" checked={selectedIds.includes(c.customer_id)} onChange={() => toggleSelect(c.customer_id)} /></td>
-                <td className="border p-2">{c.customer_id}</td>
-                <td className="border p-2">{c.customer_name || "—"}</td>
+                <td className="border p-2">
+                  <div className="font-medium">{c.customer_name || "—"}</div>
+                  <div className="text-xs text-gray-500">ID: {c.customer_id}</div>
+                </td>
                 <td className="border p-2">{c.address || "—"}</td>
                 <td className="border p-2">{c.vendor_code || "—"}</td>
                 <td className="border p-2">{c.phone_no || "—"}</td>
